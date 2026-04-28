@@ -1,0 +1,11 @@
+.env
+.env.*
+
+node_modules/
+npm-debug.log*
+
+reports/
+fixtures/local/
+*.local.json
+*.local.md
+*.transcript.md

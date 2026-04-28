@@ -1,0 +1,37 @@
+{
+  "id": "legacy-missing-cvc",
+  "mode": "product",
+  "description": "Negative legacy fixture: old passport lacks Customer Value Chain. Copilot should classify it as onboarding gap / missing input / needs follow-up.",
+  "source": {
+    "type": "git_ref",
+    "repoPath": "../cpo",
+    "ref": "upstream",
+    "fetchBeforeRead": true,
+    "requireClean": true,
+    "sourceDirs": [
+      "runtime/core",
+      "runtime/project_setup"
+    ],
+    "initialPromptPath": "runtime/project_setup/prompt_launch_cpo_copilot.md"
+  },
+  "initialUserMessage": "У меня уже есть старый паспорт проекта, созданный до обновления onboarding. Проверь его, пожалуйста. В нём нет Customer Value Chain.",
+  "fixturePath": "../fixtures/passports/legacy-missing-cvc.fixture.md",
+  "contractPath": "../contracts/legacy-passport.mvp.contract.json",
+  "draftAlreadyInSources": false,
+  "maxTurns": 8,
+  "temperature": 0.2,
+  "seed": 12345,
+  "reasoning": {
+    "effort": "minimal",
+    "exclude": true
+  },
+  "maxOutputTokens": {
+    "copilot": 5000,
+    "simulator": 1200
+  },
+  "models": {
+    "copilot": "openai/gpt-5-mini",
+    "simulator": "openai/gpt-5-mini",
+    "evaluator": "deterministic"
+  }
+}

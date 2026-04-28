@@ -1,0 +1,157 @@
+{
+  "id": "onboarding-product.mvp",
+  "description": "MVP deterministic contract for CPO Copilot onboarding in product mode.",
+  "rules": [
+    {
+      "id": "start-here.used",
+      "severity": "hard_fail",
+      "type": "required_patterns",
+      "target": "assistant",
+      "patterns": [
+        "START HERE|\\[START HERE\\]|Activate CPO Copilot"
+      ],
+      "reason": "Copilot должен использовать START HERE как стартовый activation protocol."
+    },
+    {
+      "id": "sources.four-blocks",
+      "severity": "hard_fail",
+      "type": "required_patterns",
+      "target": "assistant",
+      "patterns": [
+        "Что уже подключено|Шаг 0[^\\n]{0,60}Sources|уже подключ[её]н|markdown[^\\n]{0,40}пакет подключ[её]н",
+        "Что обязательно добавить|Что сейчас нужно добавить|Что нужно добавить|нужно добавить[^\\n]{0,80}Sources|добав(?:ить|лять)[^\\n]{0,80}сейчас|Ничего не требуется добавля(?:ть|ть?)|Недостающ(?:их|ие) файлов[^\\n]{0,80}нет",
+        "Что не стоит добавлять",
+        "Что можно добавить позже"
+      ],
+      "reason": "Copilot должен показать четыре обязательных блока про Sources: что уже подключено, что добавить сейчас, что не добавлять, что можно добавить позже."
+    },
+    {
+      "id": "mode.product-selected",
+      "severity": "hard_fail",
+      "type": "required_patterns",
+      "target": "assistant",
+      "patterns": [
+        "product mode|существующ(?:ий|им) продукт|уже есть продукт|продукт уже есть"
+      ],
+      "reason": "Copilot должен выбрать product mode, когда паспорт описывает существующий продукт."
+    },
+    {
+      "id": "one-question-per-step.warning",
+      "severity": "warning",
+      "type": "max_question_marks_per_turn",
+      "target": "assistant",
+      "max": 1,
+      "reason": "Copilot должен задавать один следующий вопрос за шаг. Это эвристический warning по числу вопросительных знаков."
+    },
+    {
+      "id": "customer-value-chain.before-draft",
+      "severity": "hard_fail",
+      "type": "ordered_patterns",
+      "target": "assistant",
+      "before": "Customer Value Chain|Цепочк[аи] клиентской ценности|что нужно клиенту",
+      "after": "\\[DRAFT PROJECT PASSPORT\\]",
+      "reason": "Customer Value Chain Intake должен пройти до Draft Project Passport."
+    },
+    {
+      "id": "draft.followed-by-review-and-hardening",
+      "severity": "hard_fail",
+      "type": "required_after_pattern",
+      "target": "assistant",
+      "anchor": "\\[DRAFT PROJECT PASSPORT\\]",
+      "patterns": [
+        "\\[PASSPORT CHALLENGE REVIEW\\]",
+        "\\[PASSPORT HARDENING INTERVIEW"
+      ],
+      "reason": "После Draft Project Passport Copilot должен сразу выполнить Passport Challenge Review и начать Passport Hardening."
+    },
+    {
+      "id": "draft.not-ready-for-sources",
+      "severity": "hard_fail",
+      "type": "forbidden_patterns",
+      "target": "assistant",
+      "patterns": [
+        "Draft Project Passport готов[^\\n]{0,80}Sources",
+        "чернов(?:ик|ой паспорт)[^\\n]{0,80}готов[^\\n]{0,80}Sources",
+        "сохран(?:и|ите)[^\\n]{0,80}Draft Project Passport[^\\n]{0,80}Sources"
+      ],
+      "reason": "Draft Project Passport нельзя представлять как готовый для Sources."
+    },
+    {
+      "id": "review.not-delegated-to-user",
+      "severity": "hard_fail",
+      "type": "forbidden_patterns",
+      "target": "assistant",
+      "patterns": [
+        "сначала[^\\n]{0,80}сам(?:остоятельно)?[^\\n]{0,80}проверь[^\\n]{0,80}draft",
+        "поревью(?:й|ите)[^\\n]{0,80}Draft Project Passport"
+      ],
+      "reason": "Passport Challenge Review нельзя перекладывать на пользователя до review со стороны Copilot."
+    },
+    {
+      "id": "hardening.question-shape",
+      "severity": "hard_fail",
+      "type": "required_after_pattern",
+      "target": "assistant",
+      "anchor": "\\[PASSPORT HARDENING INTERVIEW",
+      "patterns": [
+        "A[\\.)]",
+        "B[\\.)]",
+        "C[\\.)]",
+        "Что изменится в паспорте|Поле паспорта"
+      ],
+      "reason": "Hardening-вопрос должен содержать варианты A/B/C и объяснять, какое поле паспорта изменится."
+    },
+    {
+      "id": "final.not-in-first-post-draft-turn",
+      "severity": "hard_fail",
+      "type": "forbidden_in_turn_with_pattern",
+      "target": "assistant",
+      "anchor": "\\[DRAFT PROJECT PASSPORT\\]",
+      "patterns": [
+        "\\[FINAL PROJECT PASSPORT SNAPSHOT\\]"
+      ],
+      "reason": "Final Passport Snapshot не должен появляться в том же ответе, где впервые показан draft/review/hardening."
+    },
+    {
+      "id": "final.after-hardening-answer",
+      "severity": "hard_fail",
+      "type": "final_requires_user_responses_after_anchor",
+      "anchor": "\\[PASSPORT HARDENING INTERVIEW",
+      "final": "\\[FINAL PROJECT PASSPORT SNAPSHOT\\]",
+      "userPattern": "\\b(?:A|B|C)\\b|вариант\\s+[ABC]|выбираю\\s+[ABC]",
+      "minUserResponses": 1,
+      "reason": "Final Passport Snapshot должен появляться только после хотя бы одного ответа пользователя на critical/major hardening."
+    },
+    {
+      "id": "hardening.no-self-decision",
+      "severity": "hard_fail",
+      "type": "forbidden_in_turn_with_pattern",
+      "target": "assistant",
+      "anchor": "\\[PASSPORT HARDENING INTERVIEW",
+      "patterns": [
+        "я выбираю вариант",
+        "выбираю за тебя",
+        "сам(?:а)? выберу hardening decision"
+      ],
+      "reason": "Copilot не должен выбирать hardening decision за пользователя."
+    },
+    {
+      "id": "forbidden-claims.no-evidence",
+      "severity": "hard_fail",
+      "type": "forbidden_patterns",
+      "target": "assistant",
+      "patterns": [
+        "PMF (?:есть|достигнут|подтвержд)",
+        "PCF (?:есть|достигнут|подтвержд)",
+        "customer success (?:есть|подтвержд)",
+        "бизнес-эффект (?:доказан|подтверждён|подтвержден)"
+      ],
+      "allowedContextPatterns": [
+        "Нельзя утверждать[^\\n]{0,160}(?:PMF|PCF|customer success|бизнес-эффект)[^\\n]{0,120}(?:есть|достигнут|подтвержд|доказан)",
+        "пока нельзя утверждать[^\\n]{0,160}(?:PMF|PCF|customer success|бизнес-эффект)",
+        "нельзя[^\\n]{0,80}(?:PMF|PCF|customer success|бизнес-эффект)"
+      ],
+      "reason": "Copilot не должен утверждать customer success, PMF, PCF или бизнес-эффект без evidence."
+    }
+  ]
+}

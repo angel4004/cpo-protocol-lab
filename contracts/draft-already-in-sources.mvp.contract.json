@@ -1,0 +1,61 @@
+{
+  "id": "draft-already-in-sources.mvp",
+  "description": "MVP deterministic contract for product onboarding when a draft passport already appeared in Sources.",
+  "rules": [
+    {
+      "id": "sources.four-blocks",
+      "severity": "hard_fail",
+      "type": "required_patterns",
+      "target": "assistant",
+      "patterns": [
+        "Что уже подключено",
+        "Что обязательно добавить",
+        "Что не стоит добавлять",
+        "Что можно добавить позже"
+      ],
+      "reason": "Copilot должен показать четыре обязательных блока про Sources."
+    },
+    {
+      "id": "mode.product-selected",
+      "severity": "hard_fail",
+      "type": "required_patterns",
+      "target": "assistant",
+      "patterns": [
+        "product mode|существующ(?:ий|им) продукт|уже есть продукт|продукт уже есть"
+      ],
+      "reason": "Copilot должен выбрать product mode для существующего продукта."
+    },
+    {
+      "id": "draft.source-hygiene-hardening",
+      "severity": "hard_fail",
+      "type": "required_after_pattern",
+      "target": "assistant",
+      "anchor": "PASSPORT HARDENING INTERVIEW|Passport Hardening",
+      "patterns": [
+        "source hygiene|Sources hygiene|гигиен[аы] Sources|источник(?:ом|и)? правды|draft[^\\n]{0,80}Sources|черновик[^\\n]{0,80}Sources"
+      ],
+      "reason": "Если draft уже попал в Sources, первый hardening-вопрос должен быть про source hygiene."
+    },
+    {
+      "id": "draft.not-ready-for-sources",
+      "severity": "hard_fail",
+      "type": "forbidden_patterns",
+      "target": "assistant",
+      "patterns": [
+        "Draft Project Passport готов[^\\n]{0,80}Sources",
+        "чернов(?:ик|ой паспорт)[^\\n]{0,80}готов[^\\n]{0,80}Sources"
+      ],
+      "reason": "Draft Project Passport нельзя представлять как готовый для Sources."
+    },
+    {
+      "id": "final.after-hardening-answer",
+      "severity": "hard_fail",
+      "type": "final_requires_user_responses_after_anchor",
+      "anchor": "PASSPORT HARDENING INTERVIEW|Passport Hardening",
+      "final": "\\[FINAL PROJECT PASSPORT SNAPSHOT\\]",
+      "userPattern": "\\b(?:A|B|C)\\b|вариант\\s+[ABC]|выбираю\\s+[ABC]",
+      "minUserResponses": 1,
+      "reason": "Final Passport Snapshot должен появляться только после ответа пользователя на source hygiene hardening."
+    }
+  ]
+}

@@ -1,0 +1,71 @@
+{
+  "id": "legacy-passport.mvp",
+  "description": "MVP deterministic contract for legacy passport review without Customer Value Chain.",
+  "rules": [
+    {
+      "id": "legacy.retrospective-review",
+      "severity": "hard_fail",
+      "type": "required_patterns",
+      "target": "assistant",
+      "patterns": [
+        "Retrospective Passport Review|ретроспективн(?:ый|ого) review|стар(?:ый|ого) onboarding"
+      ],
+      "reason": "Legacy passport scenario должен запускать Retrospective Passport Review."
+    },
+    {
+      "id": "legacy.no-blame-classification",
+      "severity": "hard_fail",
+      "type": "required_patterns",
+      "target": "assistant",
+      "patterns": [
+        "onboarding gap|missing input|needs follow-up|онбординг[ -]?gap|недостающ(?:ий|ие) вводн|требу(?:ет|ют) follow-up"
+      ],
+      "reason": "Отсутствующий Customer Value Chain должен классифицироваться как onboarding gap / missing input / needs follow-up."
+    },
+    {
+      "id": "legacy.not-author-error",
+      "severity": "hard_fail",
+      "type": "forbidden_patterns",
+      "target": "assistant",
+      "patterns": [
+        "ошибк(?:а|ой) автора",
+        "автор(?: паспорта)? ошиб(?:ся|лась)",
+        "плохой паспорт из-за автора"
+      ],
+      "allowedContextPatterns": [
+        "не\\s+ошибк(?:а|ой) автора",
+        "это\\s+не\\s+ошибк(?:а|ой) автора"
+      ],
+      "reason": "Copilot не должен обвинять автора паспорта за gap, возникший из-за старого onboarding."
+    },
+    {
+      "id": "legacy.forbidden-claims",
+      "severity": "hard_fail",
+      "type": "forbidden_patterns",
+      "target": "assistant",
+      "patterns": [
+        "customer success (?:есть|подтвержд)",
+        "PMF (?:есть|достигнут|подтвержд)",
+        "PCF (?:есть|достигнут|подтвержд)",
+        "бизнес-эффект (?:доказан|подтверждён|подтвержден)"
+      ],
+      "allowedContextPatterns": [
+        "Нельзя утверждать[^\\n]{0,160}(?:PMF|PCF|customer success|бизнес-эффект)[^\\n]{0,120}(?:есть|достигнут|подтвержд|доказан)",
+        "пока нельзя утверждать[^\\n]{0,160}(?:PMF|PCF|customer success|бизнес-эффект)",
+        "нельзя[^\\n]{0,120}(?:PMF|PCF|customer success|бизнес-эффект)",
+        "not assessed[^\\n]{0,120}(?:PMF|PCF)"
+      ],
+      "reason": "Copilot не должен утверждать customer success, PMF, PCF или бизнес-эффект без evidence."
+    },
+    {
+      "id": "legacy.source-hygiene",
+      "severity": "warning",
+      "type": "required_patterns",
+      "target": "assistant",
+      "patterns": [
+        "source hygiene|Sources|источник(?:ом|и) правды"
+      ],
+      "reason": "Legacy passport review должен упомянуть source hygiene / риск источника правды."
+    }
+  ]
+}

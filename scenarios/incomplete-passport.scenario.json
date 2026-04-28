@@ -1,0 +1,37 @@
+{
+  "id": "incomplete-passport",
+  "mode": "product",
+  "description": "Product onboarding with an incomplete passport and many unknown fields.",
+  "source": {
+    "type": "git_ref",
+    "repoPath": "../cpo",
+    "ref": "upstream",
+    "fetchBeforeRead": true,
+    "requireClean": true,
+    "sourceDirs": [
+      "runtime/core",
+      "runtime/project_setup"
+    ],
+    "initialPromptPath": "runtime/project_setup/prompt_launch_cpo_copilot.md"
+  },
+  "initialUserMessage": "У меня уже есть продукт, но паспорт проекта неполный. Помоги провести onboarding без додумывания недостающих данных.",
+  "fixturePath": "../fixtures/passports/incomplete-product.fixture.json",
+  "contractPath": "../contracts/incomplete-passport.mvp.contract.json",
+  "draftAlreadyInSources": false,
+  "maxTurns": 8,
+  "temperature": 0.2,
+  "seed": 12345,
+  "reasoning": {
+    "effort": "minimal",
+    "exclude": true
+  },
+  "maxOutputTokens": {
+    "copilot": 5000,
+    "simulator": 1200
+  },
+  "models": {
+    "copilot": "openai/gpt-5-mini",
+    "simulator": "openai/gpt-5-mini",
+    "evaluator": "deterministic"
+  }
+}

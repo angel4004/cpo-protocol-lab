@@ -1,0 +1,26 @@
+{
+  "projectName": "Evidence Gap Pricing Monitor",
+  "userStyle": "ordinary_user",
+  "known": {
+    "productMode": "У нас уже есть продукт.",
+    "productOneLiner": "Внутренний монитор, который показывает подозрительные изменения цен в отелях.",
+    "scope": "Ранний продукт для операционной команды.",
+    "customerNeed": "Операционной команде нужно быстрее замечать странные изменения цен.",
+    "productCapability": "Монитор подсвечивает резкие изменения и показывает источник изменения.",
+    "customerAction": "Оператор проверяет изменение и решает, нужен ли follow-up с отелем.",
+    "constraints": "Нельзя автоматически менять цены."
+  },
+  "unknown": [
+    "PMF evidence",
+    "PCF evidence",
+    "customer success evidence",
+    "доказанный бизнес-эффект",
+    "baseline по ошибочным изменениям цен",
+    "target metric threshold"
+  ],
+  "answerPolicy": {
+    "whenMissing": "unknown / не знаю",
+    "doNotInvent": true,
+    "doNotHelpPassTest": true
+  }
+}

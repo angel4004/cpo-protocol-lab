@@ -1,0 +1,17 @@
+{
+  "name": "cpo-protocol-lab",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "run": "node src/cli.js",
+    "check": "node src/cli.js check",
+    "check:branch": "node src/cli.js check --suite branch",
+    "check:exploration": "node src/cli.js check --mode exploration",
+    "check:bundle": "node src/cli.js bundle --scenario scenarios/product-happy.scenario.json"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

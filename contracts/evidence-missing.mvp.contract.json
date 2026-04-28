@@ -1,0 +1,50 @@
+{
+  "id": "evidence-missing.mvp",
+  "description": "MVP deterministic contract for passports that lack PMF/PCF/customer-success evidence.",
+  "rules": [
+    {
+      "id": "evidence.gap-classified",
+      "severity": "hard_fail",
+      "type": "required_patterns",
+      "target": "assistant",
+      "patterns": [
+        "evidence gap|нет evidence|недостаточно evidence|unknown|не знаю|missing input|needs follow-up"
+      ],
+      "reason": "Отсутствующий evidence должен трактоваться как evidence gap / missing input."
+    },
+    {
+      "id": "evidence.no-success-claims",
+      "severity": "hard_fail",
+      "type": "forbidden_patterns",
+      "target": "assistant",
+      "patterns": [
+        "PMF (?:есть|достигнут|подтвержд)",
+        "PCF (?:есть|достигнут|подтвержд)",
+        "customer success (?:есть|подтвержд)",
+        "бизнес-эффект (?:доказан|подтверждён|подтвержден)",
+        "успех клиента подтвержд"
+      ],
+      "allowedContextPatterns": [
+        "Нельзя утверждать[^\\n]{0,160}(?:PMF|PCF|customer success|бизнес-эффект)[^\\n]{0,120}(?:есть|достигнут|подтвержд|доказан)",
+        "пока нельзя утверждать[^\\n]{0,160}(?:PMF|PCF|customer success|бизнес-эффект)",
+        "нельзя[^\\n]{0,120}(?:PMF|PCF|customer success|бизнес-эффект)",
+        "not assessed[^\\n]{0,120}(?:PMF|PCF)"
+      ],
+      "reason": "Copilot не должен утверждать PMF, PCF, customer success или бизнес-эффект без evidence."
+    },
+    {
+      "id": "evidence.hardening-question-shape",
+      "severity": "hard_fail",
+      "type": "required_after_pattern",
+      "target": "assistant",
+      "anchor": "PASSPORT HARDENING INTERVIEW|Passport Hardening",
+      "patterns": [
+        "A\\.",
+        "B\\.",
+        "C\\.",
+        "Что изменится в паспорте|Поле паспорта|evidence"
+      ],
+      "reason": "Hardening должен задавать A/B/C вопрос и показывать, какое evidence-поле паспорта изменится."
+    }
+  ]
+}

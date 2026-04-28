@@ -1,0 +1,26 @@
+{
+  "projectName": "Incomplete Renewal Assistant",
+  "userStyle": "ordinary_user",
+  "known": {
+    "productMode": "У нас уже есть продукт, но паспорт неполный.",
+    "productOneLiner": "Помощник для CSM, который подсказывает риск непродления клиента.",
+    "scope": "Пока пилот на небольшой группе клиентов.",
+    "customerNeed": "CSM нужно заранее видеть риск непродления.",
+    "productCapability": "Продукт показывает risk signal по клиенту.",
+    "evidence": "Есть несколько интервью, но структурированного evidence pack пока нет."
+  },
+  "unknown": [
+    "Customer Value Chain полностью",
+    "точный customer action после risk signal",
+    "baseline renewal rate",
+    "PMF evidence",
+    "PCF evidence",
+    "бизнес-эффект",
+    "финальные guardrails"
+  ],
+  "answerPolicy": {
+    "whenMissing": "unknown / не знаю",
+    "doNotInvent": true,
+    "doNotHelpPassTest": true
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "id": "exploration-no-product",
+  "mode": "exploration",
+  "description": "No-product onboarding: simulator has no project passport and must not invent product facts.",
+  "source": {
+    "type": "git_ref",
+    "repoPath": "../cpo",
+    "ref": "upstream",
+    "fetchBeforeRead": true,
+    "requireClean": true,
+    "sourceDirs": [
+      "runtime/core",
+      "runtime/project_setup"
+    ],
+    "initialPromptPath": "runtime/project_setup/prompt_launch_cpo_copilot.md"
+  },
+  "initialUserMessage": "У меня пока нет готового продукта и паспорта проекта. Хочу разобраться, можно ли исследовать новую возможность.",
+  "fixturePath": null,
+  "contractPath": "../contracts/exploration-no-product.mvp.contract.json",
+  "draftAlreadyInSources": false,
+  "maxTurns": 8,
+  "temperature": 0.2,
+  "seed": 12345,
+  "reasoning": {
+    "effort": "minimal",
+    "exclude": true
+  },
+  "maxOutputTokens": {
+    "copilot": 5000,
+    "simulator": 1200
+  },
+  "models": {
+    "copilot": "openai/gpt-5-mini",
+    "simulator": "openai/gpt-5-mini",
+    "evaluator": "deterministic"
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "id": "incomplete-passport.mvp",
+  "description": "MVP deterministic contract for incomplete product passports with many unknowns.",
+  "rules": [
+    {
+      "id": "incomplete.classified-as-missing-input",
+      "severity": "hard_fail",
+      "type": "required_patterns",
+      "target": "assistant",
+      "patterns": [
+        "missing input|needs follow-up|unknown|не знаю|недостающ(?:ий|ие) вводн|онбординг[ -]?gap|onboarding gap"
+      ],
+      "reason": "Неполные данные паспорта должны трактоваться как missing input / needs follow-up, а не додумываться Copilot."
+    },
+    {
+      "id": "incomplete.hardening-question-shape",
+      "severity": "hard_fail",
+      "type": "required_after_pattern",
+      "target": "assistant",
+      "anchor": "PASSPORT HARDENING INTERVIEW|Passport Hardening",
+      "patterns": [
+        "A\\.",
+        "B\\.",
+        "C\\.",
+        "Что изменится в паспорте|Поле паспорта"
+      ],
+      "reason": "Hardening должен задавать A/B/C вопрос и называть, какое поле паспорта изменится."
+    },
+    {
+      "id": "incomplete.no-unsupported-claims",
+      "severity": "hard_fail",
+      "type": "forbidden_patterns",
+      "target": "assistant",
+      "patterns": [
+        "PMF (?:есть|достигнут|подтвержд)",
+        "PCF (?:есть|достигнут|подтвержд)",
+        "customer success (?:есть|подтвержд)",
+        "бизнес-эффект (?:доказан|подтверждён|подтвержден)"
+      ],
+      "allowedContextPatterns": [
+        "Нельзя утверждать[^\\n]{0,160}(?:PMF|PCF|customer success|бизнес-эффект)[^\\n]{0,120}(?:есть|достигнут|подтвержд|доказан)",
+        "пока нельзя утверждать[^\\n]{0,160}(?:PMF|PCF|customer success|бизнес-эффект)",
+        "нельзя[^\\n]{0,120}(?:PMF|PCF|customer success|бизнес-эффект)",
+        "not assessed[^\\n]{0,120}(?:PMF|PCF)"
+      ],
+      "reason": "Copilot не должен превращать unknown-поля в неподтвержденные success claims."
+    },
+    {
+      "id": "final.after-hardening-answer",
+      "severity": "hard_fail",
+      "type": "final_requires_user_responses_after_anchor",
+      "anchor": "PASSPORT HARDENING INTERVIEW|Passport Hardening",
+      "final": "\\[FINAL PROJECT PASSPORT SNAPSHOT\\]",
+      "userPattern": "\\b(?:A|B|C)\\b|вариант\\s+[ABC]|выбираю\\s+[ABC]",
+      "minUserResponses": 1,
+      "reason": "Final Passport Snapshot должен появляться только после ответа пользователя на hardening."
+    }
+  ]
+}

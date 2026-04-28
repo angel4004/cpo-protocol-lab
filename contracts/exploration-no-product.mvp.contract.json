@@ -1,0 +1,52 @@
+{
+  "id": "exploration-no-product.mvp",
+  "description": "MVP deterministic contract for onboarding when there is no existing product or passport.",
+  "rules": [
+    {
+      "id": "sources.four-blocks",
+      "severity": "hard_fail",
+      "type": "required_patterns",
+      "target": "assistant",
+      "patterns": [
+        "Что уже подключено",
+        "Что обязательно добавить|Что сейчас нужно добавить|Что нужно добавить|что добавить в Sources сейчас|Недостающ(?:их|ие) файлов[^\\n]{0,80}нет|Ничего не требуется добавля(?:ть|ть?)",
+        "Что не стоит добавлять",
+        "Что можно добавить позже"
+      ],
+      "reason": "Copilot должен показать четыре обязательных блока про Sources."
+    },
+    {
+      "id": "mode.exploration-selected",
+      "severity": "hard_fail",
+      "type": "required_patterns",
+      "target": "assistant",
+      "patterns": [
+        "exploration mode|исследовательск|продукта пока нет|нет готового продукта|без готового продукта"
+      ],
+      "reason": "Copilot должен выбрать exploration mode, когда продукта и паспорта нет."
+    },
+    {
+      "id": "exploration.no-product-claims",
+      "severity": "hard_fail",
+      "type": "forbidden_patterns",
+      "target": "assistant",
+      "patterns": [
+        "выбираю product mode",
+        "у вас уже есть продукт",
+        "продукт уже есть",
+        "PMF (?:есть|достигнут|подтвержд)",
+        "PCF (?:есть|достигнут|подтвержд)",
+        "бизнес-эффект (?:доказан|подтверждён|подтвержден)"
+      ],
+      "reason": "Copilot не должен выдумывать существующий продукт, PMF, PCF или бизнес-эффект."
+    },
+    {
+      "id": "exploration.one-question-per-step.warning",
+      "severity": "warning",
+      "type": "max_question_marks_per_turn",
+      "target": "assistant",
+      "max": 1,
+      "reason": "Copilot должен задавать один следующий вопрос за шаг."
+    }
+  ]
+}
