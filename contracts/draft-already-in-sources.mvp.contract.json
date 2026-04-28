@@ -42,8 +42,8 @@
       "type": "forbidden_patterns",
       "target": "assistant",
       "patterns": [
-        "Draft Project Passport готов[^\\n]{0,80}Sources",
-        "чернов(?:ик|ой паспорт)[^\\n]{0,80}готов[^\\n]{0,80}Sources"
+        "Draft Project Passport[^\\n]{0,40}(?:ready|готов(?:ый|ая|ое|ые|ым|а|о)?(?![а-яё]))[^\\n]{0,80}Sources",
+        "чернов(?:ик|ой паспорт)[^\\n]{0,80}готов(?:ый|ая|ое|ые|ым|а|о)?(?![а-яё])[^\\n]{0,80}Sources"
       ],
       "reason": "Draft Project Passport нельзя представлять как готовый для Sources."
     },

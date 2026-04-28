@@ -1,7 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 
 import { evaluateTranscript } from '../src/evaluator/deterministicRules.js';
+
+const draftAlreadyInSourcesContract = JSON.parse(readFileSync(new URL('../contracts/draft-already-in-sources.mvp.contract.json', import.meta.url), 'utf8'));
 
 const contract = {
   id: 'onboarding-contract-test',
@@ -324,4 +327,64 @@ test('evaluateTranscript treats scoped forbidden checks as not applicable when a
 
   assert.equal(result.verdict, 'pass');
   assert.equal(result.findings[0].status, 'pass');
+});
+
+test('draft-already-in-sources contract allows final passport publication wording after draft removal', () => {
+  const result = evaluateTranscript([
+    {
+      role: 'assistant',
+      content: [
+        '## Sources Check',
+        '### Что уже подключено в Sources',
+        'runtime/core/canon_paf_knowledge_layer.md',
+        '### Что обязательно добавить в Sources сейчас',
+        'Ничего из рабочего пакета не требуется добавить.',
+        '### Что не стоит добавлять в Sources',
+        'Промежуточные рабочие черновики.',
+        '### Что можно добавить позже',
+        'Стабильный финальный паспорт.',
+        'Mode Check: product mode.',
+        '[PASSPORT HARDENING INTERVIEW]',
+        'Поле паспорта: Source hygiene / Passport visibility.',
+        'Что изменится в паспорте: Source status.',
+        'A. Удалить draft из Sources сейчас.',
+        'B. Заменить его финальным файлом после hardening.',
+        'C. Оставить как publish blocker.',
+        'Source status: draft removed from Sources. Этот chat-only рабочий черновик будет hardened в чате. Финальная стабильная версия [PROJECT PASSPORT] будет подготовлена в формате markdown и добавлена в Sources вручную пользователем после завершения Passport Hardening.'
+      ].join('\n')
+    }
+  ], draftAlreadyInSourcesContract);
+
+  assert.equal(result.verdict, 'pass');
+  assert.equal(result.findings.find((finding) => finding.ruleId === 'draft.not-ready-for-sources').status, 'pass');
+});
+
+test('draft-already-in-sources contract rejects draft passport ready-for-Sources wording', () => {
+  const result = evaluateTranscript([
+    {
+      role: 'assistant',
+      content: [
+        '## Sources Check',
+        '### Что уже подключено в Sources',
+        'runtime/core/canon_paf_knowledge_layer.md',
+        '### Что обязательно добавить в Sources сейчас',
+        'Ничего из рабочего пакета не требуется добавить.',
+        '### Что не стоит добавлять в Sources',
+        'Промежуточные рабочие черновики.',
+        '### Что можно добавить позже',
+        'Стабильный финальный паспорт.',
+        'Mode Check: product mode.',
+        '[PASSPORT HARDENING INTERVIEW]',
+        'Поле паспорта: Source hygiene / Passport visibility.',
+        'Что изменится в паспорте: Source status.',
+        'A. Удалить draft из Sources сейчас.',
+        'B. Заменить его финальным файлом после hardening.',
+        'C. Оставить как publish blocker.',
+        'Draft Project Passport готов для загрузки в Sources.'
+      ].join('\n')
+    }
+  ], draftAlreadyInSourcesContract);
+
+  assert.equal(result.verdict, 'hard_fail');
+  assert.equal(result.findings.find((finding) => finding.ruleId === 'draft.not-ready-for-sources').status, 'fail');
 });
