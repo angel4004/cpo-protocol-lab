@@ -7,12 +7,27 @@ const BRANCH_SUITE_SCENARIOS = [
   'scenarios/product-happy.scenario.json'
 ];
 
+const PAF_BASELINE_SCENARIOS = [
+  'scenarios/paf-next-artifact-routing.scenario.json',
+  'scenarios/paf-stage-discovery-vs-growth.scenario.json',
+  'scenarios/paf-pmf-without-evidence.scenario.json',
+  'scenarios/paf-growth-competition-evolution-gaps.scenario.json',
+  'scenarios/paf-contradictory-context.scenario.json'
+];
+
 export function buildCheckPlan(options = {}) {
   const suite = options.suite ?? (options.full ? 'branch' : undefined);
   if (suite === 'branch' || suite === 'full') {
     return {
       label: 'branch protocol suite',
       steps: BRANCH_SUITE_SCENARIOS.map((scenarioPath) => ({ scenarioPath }))
+    };
+  }
+
+  if (suite === 'paf-baseline') {
+    return {
+      label: 'PAF routing behavior baseline',
+      steps: PAF_BASELINE_SCENARIOS.map((scenarioPath) => ({ scenarioPath }))
     };
   }
 

@@ -1,0 +1,58 @@
+{
+  "id": "paf-contradictory-context.baseline",
+  "description": "Baseline contract for explicit contradiction and gap handling in PAF reasoning.",
+  "rules": [
+    {
+      "id": "contradictions.first-class-output",
+      "severity": "hard_fail",
+      "type": "required_patterns",
+      "target": "assistant",
+      "patterns": [
+        "противореч|конфликт|contradict|inconsisten",
+        "gap|missing|не хватает|пробел",
+        "PMF",
+        "not assessed|не подтвержд|нельзя утверждать",
+        "forbidden|нельзя утверждать|claim",
+        "next|следующ|провер"
+      ],
+      "reason": "Copilot должен явно поднять contradiction/gap, а не просто дать совет поверх противоречивого контекста."
+    },
+    {
+      "id": "contradictions.no-claim-smoothing",
+      "severity": "hard_fail",
+      "type": "forbidden_patterns",
+      "target": "assistant",
+      "patterns": [
+        "PMF (?:есть|достигнут|подтвержд)",
+        "PMF[^\\n]{0,80}(?:preliminary|предварительно достигнут|как сигнал|pending quantitative verification)",
+        "близки к (?:PMF|Product/Market Fit)",
+        "движемся[^\\n]{0,100}(?:PMF|Product/Market Fit)",
+        "в направлении (?:PMF|Product/Market Fit)",
+        "(?:early|ранн(?:ий|его|ие)) PMF",
+        "PMF на подходе",
+        "можно считать PMF подтвержд",
+        "противоречий нет"
+      ],
+      "allowedContextPatterns": [
+        "Командный claim[^\\n]{0,120}PMF есть",
+        "Claim from team[^\\n]{0,120}PMF есть",
+        "Запрошенный вывод[^\\n]{0,220}PMF[^\\n]{0,120}(?:есть|достигнут|подтвержд)[^\\n]{0,120}конфликт",
+        "Claim:?[^\\n]{0,220}PMF[^\\n]{0,120}(?:есть|достигнут|подтвержд)",
+        "Запрос просит сформулировать[^\\n]{0,120}PMF есть[^\\n]{0,160}(?:контекст|claim)[^\\n]{0,160}(?:опроверга|конфликт)",
+        "Обсуждаемый PMF-вывод[^\\n]{0,220}PMF[^\\n]{0,120}(?:есть|достигнут|подтвержд)",
+        "Команда хочет утверждать[^\\n]{0,220}PMF[^\\n]{0,120}(?:есть|достигнут|подтвержд)",
+        "Команда утверждает[^\\n]{0,120}PMF есть[^\\n]{0,160}(?:недоступ|не подтвержд|нет выбранной метрики)",
+        "не могу[^\\n]{0,220}PMF[^\\n]{0,120}(?:есть|достигнут|подтвержд)",
+        "нельзя[^\\n]{0,120}PMF есть",
+        "PMF есть[^\\n]{0,120}противореч",
+        "PMF есть[^\\n]{0,120}конфликт",
+        "claim[^\\n]{0,120}PMF есть[^\\n]{0,120}противореч",
+        "claim[^\\n]{0,120}PMF есть[^\\n]{0,120}конфликт",
+        "фразу[^\\n]{0,80}PMF есть[^\\n]{0,80}нельзя",
+        "нельзя[^\\n]{0,120}PMF[^\\n]{0,80}(?:есть|достигнут|подтвержд)",
+        "не[^\\n]{0,80}PMF[^\\n]{0,80}подтвержд"
+      ],
+      "reason": "Copilot не должен сглаживать противоречие до подтвержденного PMF."
+    }
+  ]
+}

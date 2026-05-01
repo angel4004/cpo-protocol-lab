@@ -5,6 +5,9 @@ import { readFileSync } from 'node:fs';
 import { evaluateTranscript } from '../src/evaluator/deterministicRules.js';
 
 const draftAlreadyInSourcesContract = JSON.parse(readFileSync(new URL('../contracts/draft-already-in-sources.mvp.contract.json', import.meta.url), 'utf8'));
+const pafContradictoryContextContract = JSON.parse(readFileSync(new URL('../contracts/paf-contradictory-context.baseline.contract.json', import.meta.url), 'utf8'));
+const pafPmfWithoutEvidenceContract = JSON.parse(readFileSync(new URL('../contracts/paf-pmf-without-evidence.baseline.contract.json', import.meta.url), 'utf8'));
+const pafStageDiscoveryVsGrowthContract = JSON.parse(readFileSync(new URL('../contracts/paf-stage-discovery-vs-growth.baseline.contract.json', import.meta.url), 'utf8'));
 
 const contract = {
   id: 'onboarding-contract-test',
@@ -237,6 +240,105 @@ test('evaluateTranscript can ignore forbidden claims when they appear in explici
 
   assert.equal(result.verdict, 'pass');
   assert.equal(result.findings[0].status, 'pass');
+});
+
+test('evaluateTranscript allows forbidden PMF wording inside explicit claim and conflict context', () => {
+  const result = evaluateTranscript([
+    {
+      role: 'assistant',
+      content: [
+        '## Противоречие / conflict',
+        '',
+        'Запрошенный вывод — `PMF подтверждён, можно переходить к Growth` — конфликтует с текущим evidence.',
+        '',
+        '**Claim:** сформулировать, что product/market fit подтверждён (PMF — состояние выбора продукта как основного способа), и перейти к Product Growth.',
+        '',
+        '**Конфликт:** в проектном контексте прямо указано, что отсутствуют ключевые элементы PMF evidence.',
+        '',
+        'Поэтому я не могу сформулировать, что PMF подтверждён, и не могу рекомендовать переход к Growth.',
+        '',
+        '## PMF evidence block',
+        '',
+        '**Обсуждаемый PMF-вывод (PMF claim):** Команда хочет утверждать, что PMF подтверждён и можно переходить к Product Growth.',
+        '**Потребность (Need):** managers need cancellation insights.',
+        '**Сегмент пользователей (Segment):** managers of mid-size hotels.',
+        '**Текущая альтернатива (Alternative):** Missing input.',
+        '**Метрика PMF (PMF metric):** Missing input.',
+        '**Норма сравнения (norm / baseline / benchmark):** Missing input.',
+        '**Качественные доказательства (qualitative evidence):** early interest, not PMF evidence.',
+        '**Next check:** провести PMF validation.',
+        '',
+        'PMF пока не подтверждён, и переход к Growth сейчас нельзя утверждать.'
+      ].join('\n')
+    }
+  ], pafPmfWithoutEvidenceContract);
+
+  assert.equal(result.verdict, 'pass');
+  assert.equal(result.findings.find((finding) => finding.ruleId === 'pmf.no-unsupported-confirmation').status, 'pass');
+});
+
+test('evaluateTranscript still rejects positive PMF confirmation outside claim context', () => {
+  const result = evaluateTranscript([
+    {
+      role: 'assistant',
+      content: [
+        'PMF подтверждён.',
+        'Потребность: managers need cancellation insights.',
+        'Сегмент пользователей: managers of mid-size hotels.',
+        'Текущая альтернатива: dashboards.',
+        'Метрика PMF: usage.',
+        'baseline / benchmark / norm: assumed.',
+        'qualitative evidence: demo feedback.',
+        'next step: Growth.'
+      ].join('\n')
+    }
+  ], pafPmfWithoutEvidenceContract);
+
+  assert.equal(result.verdict, 'hard_fail');
+  assert.equal(result.findings.find((finding) => finding.ruleId === 'pmf.no-unsupported-confirmation').status, 'fail');
+});
+
+test('PAF contradictory context contract allows requested PMF wording inside explicit conflict framing', () => {
+  const result = evaluateTranscript([
+    {
+      role: 'assistant',
+      content: [
+        '## Противоречие / conflict',
+        '',
+        'Запрос просит сформулировать «PMF есть», но контекст содержит факты, которые этот claim прямо опровергают.',
+        '',
+        'Evidence gap: нет выбранной метрики PMF, нет baseline, нет нормы сравнения.',
+        '',
+        'Forbidden claim labels:',
+        '- `PMF status: not assessed / missing evidence`',
+        '',
+        'Next check: выбрать метрику PMF и собрать evidence после реального использования.'
+      ].join('\n')
+    }
+  ], pafContradictoryContextContract);
+
+  assert.equal(result.verdict, 'pass');
+  assert.equal(result.findings.find((finding) => finding.ruleId === 'contradictions.no-claim-smoothing').status, 'pass');
+});
+
+test('PAF stage contract allows explicit correction that Stage 2 is Discovery and not Growth', () => {
+  const result = evaluateTranscript([
+    {
+      role: 'assistant',
+      content: [
+        'Противоречие / conflict: Stage 2 здесь означает Market Research внутри Product Discovery, а не Product Growth.',
+        '',
+        'В каноне есть Product Life Cycle и 7 стадий внутри Product Discovery.',
+        '',
+        'Команда говорит «Stage 2», потому что делает Market Research. Значит, это Stage 2 внутри Product Discovery, а не Product Growth.',
+        '',
+        'PMF evidence отсутствует, поэтому переход к Growth не обоснован.'
+      ].join('\n')
+    }
+  ], pafStageDiscoveryVsGrowthContract);
+
+  assert.equal(result.verdict, 'pass');
+  assert.equal(result.findings.find((finding) => finding.ruleId === 'stage-routing.no-false-growth-readiness').status, 'pass');
 });
 
 test('evaluateTranscript can ignore author-error phrase in explicit no-blame context', () => {

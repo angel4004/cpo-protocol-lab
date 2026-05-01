@@ -1,0 +1,42 @@
+{
+  "id": "paf-stage-discovery-vs-growth.baseline",
+  "description": "Baseline contract for distinguishing Product Life Cycle stages from seven Product Discovery stages.",
+  "rules": [
+    {
+      "id": "stage-routing.distinguishes-two-stage-scales",
+      "severity": "hard_fail",
+      "type": "required_patterns",
+      "target": "assistant",
+      "patterns": [
+        "Product Life Cycle|PLC|4 стад|переход[а]? к Product Growth|Product Discovery[^\\n]{0,160}Product Growth",
+        "Product Discovery|7 стад|внутри Product Discovery",
+        "Stage 2|Market Research|вторая стад",
+        "Growth|Product Growth",
+        "PMF|evidence|доказатель"
+      ],
+      "reason": "Copilot должен различить Stage 2 внутри Product Discovery и Product Growth в Product Life Cycle."
+    },
+    {
+      "id": "stage-routing.no-false-growth-readiness",
+      "severity": "hard_fail",
+      "type": "forbidden_patterns",
+      "target": "assistant",
+      "patterns": [
+        "Stage 2[^\\n]{0,80}значит[^\\n]{0,80}Growth",
+        "можно переходить к Growth",
+        "готовы к Growth"
+      ],
+      "allowedContextPatterns": [
+        "Противоречие / conflict[\\s\\S]{0,220}(?:Stage 2[^\\n]{0,80}значит[^\\n]{0,80}Growth|переходить к Growth|готовы к Growth)",
+        "Claim:[\\s\\S]{0,180}(?:Stage 2[^\\n]{0,80}Growth|переходить к Growth|готовы к Growth)",
+        "Утверждение[^\\n]{0,160}(?:Stage 2|Product Growth)[^\\n]{0,160}конфликт",
+        "claim[^\\n]{0,160}(?:Stage 2|Product Growth)[^\\n]{0,160}конфликт",
+        "Ваш claim[^\\n]{0,160}(?:Stage 2|Product Growth)[^\\n]{0,160}конфликт",
+        "Stage 2[^\\n]{0,100}Значит[^\\n]{0,140}внутри Product Discovery[^\\n]{0,80}не Product Growth",
+        "нельзя[^\\n]{0,120}(?:переходить к Growth|готовы к Growth)",
+        "не[^\\n]{0,80}(?:значит|означает)[^\\n]{0,80}Growth"
+      ],
+      "reason": "Copilot не должен считать Stage 2 внутри Discovery доказательством готовности к Growth."
+    }
+  ]
+}

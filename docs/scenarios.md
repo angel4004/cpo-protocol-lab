@@ -60,3 +60,72 @@ Negative / legacy fixture.
 - Copilot явно признает evidence gap.
 - Copilot не утверждает успехи без evidence.
 - Hardening вопрос фокусируется на evidence / поле паспорта.
+
+## PAF routing baseline
+
+Сценарии `paf-*` проверяют post-activation поведение: проект уже активирован, Sources и стабильный Project Passport уже подключены, пользователь задаёт обычный продуктовый вопрос.
+
+Цель baseline — измерить, применяет ли CPO Copilot PAF как routing / next-step engine, а не только как общий слой осторожности.
+
+Рекомендуемый high-fidelity запуск:
+
+```powershell
+node src/cli.js matrix --suite paf-baseline --profile quality-full --cpo-repo "..\cpo" --source-ref working-tree --no-fetch
+```
+
+`quality-full` использует full source bundle, GPT-5.5 и Sonnet 4.6, два повтора на модель. Это основной quality gate. Для продолжения оборванного прогона без повторных API-вызовов по уже готовым cells используй:
+
+```powershell
+node src/cli.js matrix --suite paf-baseline --profile quality-full --cpo-repo "..\cpo" --source-ref working-tree --no-fetch --resume <timestamp>
+```
+
+API-запуски всегда используют project-scoped `OPENROUTER_API_KEY` из локального `.env`. Не передавай ключи через process environment для matrix/check/run: ключи разных проектов не должны смешиваться.
+
+Matrix summary разделяет `behavior_fail`, `infra_blocked` и `contract_needs_review`. Provider/API/token-limit сбой не считается поведенческим CPO failure.
+
+### paf-next-artifact-routing
+
+Проверяет выбор следующего артефакта из неполного discovery-контекста.
+
+Ожидания:
+- Copilot определяет тип решения / PAF-контекст.
+- Показывает activity / key question или близкий decision-area.
+- Называет required / missing artifacts.
+- Называет forbidden claims.
+- Даёт next best artifact / check.
+
+### paf-stage-discovery-vs-growth
+
+Проверяет различение 4 стадий Product Life Cycle и 7 стадий внутри Product Discovery.
+
+Ожидания:
+- Copilot не смешивает `Stage 2` внутри Product Discovery с Product Growth.
+- Copilot требует PMF / evidence для перехода к Growth.
+- Copilot не делает false readiness claim.
+
+### paf-pmf-without-evidence
+
+Проверяет отказ подтверждать PMF без evidence.
+
+Ожидания:
+- Copilot держит PMF status как `not assessed / missing evidence`.
+- Copilot перечисляет missing evidence: need, segment, alternative, metric, baseline/norm, qualitative evidence.
+- Copilot предлагает следующий check вместо подтверждения PMF.
+
+### paf-growth-competition-evolution-gaps
+
+Проверяет reasoning по Product Growth / Competition / Evolution без изобретённых strict gates.
+
+Ожидания:
+- Copilot явно говорит, что строгие gate-критерии не найдены в каноне, если пытается использовать их как норму.
+- Copilot отделяет direct canon от assumptions / proxy по артефактам и метрикам.
+- Copilot не объявляет готовность к Competition / Evolution без evidence.
+
+### paf-contradictory-context
+
+Проверяет работу с противоречивым продуктовым контекстом.
+
+Ожидания:
+- Copilot явно поднимает contradiction / gap.
+- Copilot не сглаживает противоречие до позитивного PMF claim.
+- Copilot формулирует forbidden claims и next check.

@@ -46,6 +46,21 @@ test('buildCheckPlan runs the full branch suite when requested', () => {
   ]);
 });
 
+test('buildCheckPlan runs the PAF baseline suite when requested', () => {
+  const plan = buildCheckPlan({
+    suite: 'paf-baseline'
+  });
+
+  assert.equal(plan.label, 'PAF routing behavior baseline');
+  assert.deepEqual(plan.steps.map((step) => step.scenarioPath), [
+    'scenarios/paf-next-artifact-routing.scenario.json',
+    'scenarios/paf-stage-discovery-vs-growth.scenario.json',
+    'scenarios/paf-pmf-without-evidence.scenario.json',
+    'scenarios/paf-growth-competition-evolution-gaps.scenario.json',
+    'scenarios/paf-contradictory-context.scenario.json'
+  ]);
+});
+
 test('buildCheckPlan rejects product checks without passport', () => {
   assert.throws(() => buildCheckPlan({}), /--passport/);
   assert.throws(() => buildCheckPlan({ mode: 'product' }), /--passport/);

@@ -17,6 +17,11 @@ test('MVP scenario set covers happy, legacy, draft-in-sources, incomplete, evide
     'exploration-no-product',
     'incomplete-passport',
     'legacy-missing-cvc',
+    'paf-contradictory-context',
+    'paf-growth-competition-evolution-gaps',
+    'paf-next-artifact-routing',
+    'paf-pmf-without-evidence',
+    'paf-stage-discovery-vs-growth',
     'product-happy'
   ]);
 

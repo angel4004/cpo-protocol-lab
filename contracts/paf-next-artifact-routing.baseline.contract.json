@@ -1,0 +1,37 @@
+{
+  "id": "paf-next-artifact-routing.baseline",
+  "description": "Baseline contract for next artifact routing behavior in post-activation PAF questions.",
+  "rules": [
+    {
+      "id": "routing.required-shape",
+      "severity": "hard_fail",
+      "type": "required_patterns",
+      "target": "assistant",
+      "patterns": [
+        "decision|решени|тип вопроса|тип решения",
+        "activity|активност|ключев[оы]й вопрос|PAF.?контекст|Value Validation|Product Discovery",
+        "artifact|артефакт",
+        "missing|не хватает|unknown|недоста",
+        "forbidden|нельзя утверждать|claim",
+        "next|следующ"
+      ],
+      "reason": "Copilot должен маршрутизировать вопрос через decision/activity/artifacts/missing/forbidden/next-step, а не просто отвечать общим советом."
+    },
+    {
+      "id": "routing.no-unsupported-fit-claims",
+      "severity": "hard_fail",
+      "type": "forbidden_patterns",
+      "target": "assistant",
+      "patterns": [
+        "PMF (?:есть|достигнут|подтвержд)",
+        "PCF (?:есть|достигнут|подтвержд)",
+        "можно переходить к Growth"
+      ],
+      "allowedContextPatterns": [
+        "нельзя[^\\n]{0,120}(?:PMF|PCF|переходить к Growth)",
+        "forbidden[^\\n]{0,120}(?:PMF|PCF|Growth)"
+      ],
+      "reason": "Next-artifact routing не должен превращаться в неподтвержденный fit/stage claim."
+    }
+  ]
+}

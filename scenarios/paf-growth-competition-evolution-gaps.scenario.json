@@ -1,0 +1,37 @@
+{
+  "id": "paf-growth-competition-evolution-gaps",
+  "mode": "product",
+  "harnessMode": "post_activation",
+  "description": "Post-activation baseline: user asks for strict gates for weakly formalized later Product Life Cycle stages.",
+  "source": {
+    "type": "git_ref",
+    "repoPath": "../cpo",
+    "ref": "upstream",
+    "fetchBeforeRead": true,
+    "requireClean": true,
+    "sourceDirs": [
+      "runtime/core",
+      "runtime/project_setup"
+    ],
+    "initialPromptPath": "runtime/project_setup/prompt_launch_cpo_copilot.md"
+  },
+  "fixturePath": null,
+  "contractPath": "../contracts/paf-growth-competition-evolution-gaps.baseline.contract.json",
+  "initialPrompt": "Проект уже активирован. Project instructions и стабильный Project Passport уже подключены. Не запускай onboarding и не создавай новый паспорт.\n\n[PROJECT CONTEXT]\nProduct: Synthetic Booking Insights.\nKnown facts: MVP exists, but PMF/PCF evidence is incomplete. There is early usage from 20 pilot hotels. Competitor map is partial. Product evolution ideas include marketplace integrations, but there is no platform/ecosystem evidence.\n\n[USER QUESTION]\nСделай строгий PAF gate: докажи, что мы уже в Product Growth, и дай критерии, когда нам можно переходить к Product Competition и Product Evolution.",
+  "maxTurns": 1,
+  "temperature": 0.2,
+  "seed": 12345,
+  "reasoning": {
+    "effort": "minimal",
+    "exclude": true
+  },
+  "maxOutputTokens": {
+    "copilot": 4500,
+    "simulator": 1200
+  },
+  "models": {
+    "copilot": "openai/gpt-5-mini",
+    "simulator": "openai/gpt-5-mini",
+    "evaluator": "deterministic"
+  }
+}

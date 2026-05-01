@@ -1,15 +1,22 @@
 #!/usr/bin/env node
-import { readdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 
 import { buildCheckPlan } from './checkCommand.js';
 import { loadDotEnv, loadScenarioPackage } from './config.js';
+import {
+  buildMatrixCellReportName,
+  buildMatrixPlan,
+  buildMatrixSummary,
+  estimatePromptTokensFromChars,
+  sanitizeProviderErrorMessage
+} from './matrixCommand.js';
 import { createModelClient, inferModelProvider } from './modelClient.js';
-import { writeRunReport } from './report.js';
+import { writeMatrixReport, writeRunReport } from './report.js';
 import { replayReportFile } from './replay.js';
 import { runScenarioWithClients } from './runner.js';
 import { buildRunSettings, resolveScenarioModels } from './runSettings.js';
-import { readGitRefBundle } from './sourceBundle.js';
+import { formatSourceBundleForPrompt, readGitRefBundle } from './sourceBundle.js';
 
 function parseArgs(argv) {
   const [command = 'help', ...rest] = argv;
@@ -39,6 +46,7 @@ function usage() {
     'Usage:',
     '  npm run check -- --passport fixtures/local/my-project-passport.md',
     '  npm run check:branch',
+    '  npm run check -- --suite paf-baseline',
     '  npm run check:exploration',
     '',
     'Advanced:',
@@ -48,11 +56,12 @@ function usage() {
     '  node src/cli.js bundle --scenario scenarios/product-happy.scenario.json',
     '  node src/cli.js run --scenario scenarios/product-happy.scenario.json',
     '  node src/cli.js replay --report reports/<timestamp>/<scenario>/report.json',
+    '  node src/cli.js matrix --suite paf-baseline --profile quality-full',
     '  node src/cli.js run-all',
     '',
     'Options:',
     '  --cpo-repo <path>       Override scenario.source.repoPath',
-    '  --source-ref <ref>      Override scenario.source.ref. Use upstream for pushed branch snapshot',
+    '  --source-ref <ref>      Override scenario.source.ref. Use upstream for pushed branch snapshot or working-tree for local candidate files',
     '  --fixture <path>        Override scenario.fixturePath with a real local project passport',
     '  --no-fixture            Run without a project passport; simulator must not invent a product',
     '  --no-fetch              Do not fetch before reading upstream/origin ref',
@@ -61,8 +70,20 @@ function usage() {
     '  --report <path>         Report JSON for replay command',
     '  --passport <path>       Friendly alias for --fixture in check command',
     '  --mode <mode>           check mode: product or exploration',
-    '  --suite <name>          check suite: branch'
+    '  --suite <name>          check suite: branch',
+    '  --profile <name>        matrix profile: smoke, candidate, quality-full, release or release-full',
+    '  --copilot-models <csv>  matrix Copilot models override',
+    '  --runs <n>              matrix runs per Copilot model',
+    '  --simulator-model <id>  matrix simulator model override',
+    '  --resume <timestamp>    Reuse existing matrix cell reports from reports/<timestamp> and run only missing cells',
+    '  --prompt-token-warning <n>  Warn in preflight when estimated prompt tokens exceed n'
   ].join('\n');
+}
+
+function loadEnvironment() {
+  loadDotEnv('.env', {
+    requiredKeys: ['OPENROUTER_API_KEY']
+  });
 }
 
 function sourceOptions(scenario, options) {
@@ -102,13 +123,105 @@ function sourceSummary(bundle) {
   };
 }
 
+function matrixTimestamp() {
+  return new Date().toISOString().replaceAll(':', '-').replace(/\.\d{3}Z$/, 'Z');
+}
+
+function reportRoot(options) {
+  return resolve(options['report-root'] ?? 'reports');
+}
+
+function reportDirectory(options, timestamp, scenarioDirName) {
+  return join(reportRoot(options), timestamp, scenarioDirName);
+}
+
+function readExistingRunReport(options, timestamp, scenarioDirName) {
+  const reportDir = reportDirectory(options, timestamp, scenarioDirName);
+  const reportPath = join(reportDir, 'report.json');
+  if (!existsSync(reportPath)) {
+    return null;
+  }
+
+  return {
+    ...JSON.parse(readFileSync(reportPath, 'utf8')),
+    reportDir
+  };
+}
+
+function parseWarningThreshold(options) {
+  if (options['prompt-token-warning'] === undefined) {
+    return 120000;
+  }
+
+  const parsed = Number.parseInt(String(options['prompt-token-warning']), 10);
+  if (!Number.isInteger(parsed) || parsed < 1) {
+    throw new Error(`--prompt-token-warning must be a positive integer, got: ${options['prompt-token-warning']}`);
+  }
+
+  return parsed;
+}
+
+function initialPromptForPreflight(scenario, bundle) {
+  if (scenario.initialPrompt) {
+    return scenario.initialPrompt;
+  }
+
+  if (scenario.initialUserMessage) {
+    return `${bundle.initialPrompt.trimEnd()}\n\n${scenario.initialUserMessage}`;
+  }
+
+  return bundle.initialPrompt;
+}
+
+function buildPreflightEntry(cell, scenarioPath, options, warningThreshold) {
+  const { scenario } = loadScenarioPackage(scenarioPath, {
+    fixturePath: options.fixture,
+    noFixture: options['no-fixture'] === true
+  });
+  scenario.models = resolveScenarioModels(scenario, {
+    ...process.env,
+    COPILOT_MODEL: cell.copilotModel,
+    SIMULATOR_MODEL: cell.simulatorModel
+  });
+
+  const bundle = readGitRefBundle(sourceOptions(scenario, options));
+  const sourceInventory = bundle.files.map((file) => `- ${file.path}`).join('\n');
+  const sourceContent = formatSourceBundleForPrompt(bundle);
+  const promptChars = [
+    sourceInventory,
+    sourceContent,
+    initialPromptForPreflight(scenario, bundle)
+  ].join('\n\n').length;
+  const estimatedPromptTokens = estimatePromptTokensFromChars(promptChars);
+
+  return {
+    scenarioId: scenario.id,
+    scenarioPath,
+    copilotModel: cell.copilotModel,
+    simulatorModel: cell.simulatorModel,
+    runIndex: cell.runIndex,
+    sourceProfile: 'full',
+    sourceFiles: bundle.fileCount,
+    bundleSha256: bundle.bundleSha256,
+    sourceChars: sourceContent.length,
+    promptChars,
+    estimatedPromptTokens,
+    warningThreshold,
+    budgetStatus: estimatedPromptTokens > warningThreshold ? 'warning' : 'ok'
+  };
+}
+
 async function runScenario(scenarioPath, options) {
-  loadDotEnv();
+  loadEnvironment(options);
   const { scenario, fixture, contract, inputs } = loadScenarioPackage(scenarioPath, {
     fixturePath: options.fixture,
     noFixture: options['no-fixture'] === true
   });
-  scenario.models = resolveScenarioModels(scenario);
+  scenario.models = resolveScenarioModels(scenario, {
+    ...process.env,
+    COPILOT_MODEL: options['copilot-model'] ?? process.env.COPILOT_MODEL,
+    SIMULATOR_MODEL: options['simulator-model'] ?? process.env.SIMULATOR_MODEL
+  });
 
   const bundle = readGitRefBundle(sourceOptions(scenario, options));
   const modelClient = createModelClient();
@@ -129,7 +242,11 @@ async function runScenario(scenarioPath, options) {
     run: buildRunSettings(scenario, inferModelProvider()),
     contractSnapshot: contract
   };
-  const reportDir = writeRunReport(report, { reportRoot: options['report-root'] });
+  const reportDir = writeRunReport(report, {
+    reportRoot: options['report-root'],
+    timestamp: options.timestamp,
+    scenarioDirName: options.scenarioDirName
+  });
 
   console.log(`${scenario.id}: ${report.evaluation.verdict}`);
   console.log(`Report: ${reportDir}`);
@@ -138,7 +255,63 @@ async function runScenario(scenarioPath, options) {
     console.log(`- ${finding.severity}: ${finding.ruleId} - ${finding.reason}`);
   }
 
-  return report;
+  return {
+    ...report,
+    reportDir
+  };
+}
+
+function errorMessage(error) {
+  return sanitizeProviderErrorMessage(error instanceof Error ? error.message : String(error));
+}
+
+function buildApiErrorReport(cell, scenarioPath, options, error) {
+  const { scenario, fixture, contract, inputs } = loadScenarioPackage(scenarioPath, {
+    fixturePath: options.fixture,
+    noFixture: options['no-fixture'] === true
+  });
+  scenario.models = resolveScenarioModels(scenario, {
+    ...process.env,
+    COPILOT_MODEL: cell.copilotModel,
+    SIMULATOR_MODEL: cell.simulatorModel
+  });
+
+  let source;
+  try {
+    const bundle = readGitRefBundle(sourceOptions(scenario, options));
+    source = sourceSummary(bundle);
+  } catch (sourceError) {
+    source = {
+      error: errorMessage(sourceError)
+    };
+  }
+
+  const message = errorMessage(error);
+  return {
+    scenarioId: scenario.id,
+    transcript: [],
+    source,
+    inputs,
+    run: buildRunSettings(scenario, inferModelProvider()),
+    contractSnapshot: contract,
+    error: message,
+    evaluation: {
+      contractId: contract.id,
+      verdict: 'infra_blocked',
+      findings: [
+        {
+          ruleId: 'matrix.api-error',
+          status: 'fail',
+          severity: 'infra_blocked',
+          reason: message
+        }
+      ]
+    },
+    scenarioPath,
+    copilotModel: cell.copilotModel,
+    simulatorModel: cell.simulatorModel,
+    runIndex: cell.runIndex
+  };
 }
 
 async function main() {
@@ -176,6 +349,110 @@ async function main() {
         fixture: step.fixture,
         'no-fixture': false
       });
+    }
+    return;
+  }
+
+  if (options.command === 'matrix') {
+    loadEnvironment(options);
+    const matrixOptions = {
+      ...options,
+      suite: options.suite ?? 'paf-baseline'
+    };
+    const checkPlan = buildCheckPlan(matrixOptions);
+    const matrixPlan = buildMatrixPlan(matrixOptions, checkPlan.steps);
+    const timestamp = options.resume ?? options.timestamp ?? matrixTimestamp();
+    const warningThreshold = parseWarningThreshold(options);
+    const results = [];
+    const preflight = matrixPlan.cells.map((cell) => buildPreflightEntry(
+      cell,
+      cell.scenarioPath,
+      {
+        ...options,
+        fixture: checkPlan.steps[cell.scenarioIndex]?.fixture,
+        'no-fixture': false
+      },
+      warningThreshold
+    ));
+
+    console.log(`Matrix: ${matrixPlan.profile}`);
+    console.log(`Suite: ${matrixOptions.suite}`);
+    console.log(`Source profile: ${matrixPlan.sourceProfile}`);
+    console.log(`Copilot models: ${matrixPlan.copilotModels.join(', ')}`);
+    console.log(`Simulator model: ${matrixPlan.simulatorModel}`);
+    console.log(`Runs per model: ${matrixPlan.runs}`);
+    console.log(`Scenario-runs: ${matrixPlan.cells.length}`);
+    console.log(`Max estimated prompt tokens: ${Math.max(...preflight.map((item) => item.estimatedPromptTokens))}`);
+
+    for (const [index, cell] of matrixPlan.cells.entries()) {
+      const scenarioDirName = buildMatrixCellReportName(cell);
+      console.log(`[${index + 1}/${matrixPlan.cells.length}] ${cell.scenarioPath} | ${cell.copilotModel} | run ${cell.runIndex + 1}`);
+      if (options.resume) {
+        const existingReport = readExistingRunReport(options, timestamp, scenarioDirName);
+        if (existingReport) {
+          console.log(`${existingReport.scenarioId}: ${existingReport.evaluation?.verdict} (resumed)`);
+          console.log(`Report: ${existingReport.reportDir}`);
+          results.push({
+            ...existingReport,
+            scenarioPath: cell.scenarioPath,
+            copilotModel: cell.copilotModel,
+            simulatorModel: cell.simulatorModel,
+            runIndex: cell.runIndex
+          });
+          continue;
+        }
+      }
+
+      const runOptions = {
+        ...options,
+        timestamp,
+        scenarioDirName,
+        fixture: checkPlan.steps[cell.scenarioIndex]?.fixture,
+        'no-fixture': false,
+        'copilot-model': cell.copilotModel,
+        'simulator-model': cell.simulatorModel
+      };
+      let report;
+      try {
+        report = await runScenario(cell.scenarioPath, runOptions);
+      } catch (error) {
+        report = buildApiErrorReport(cell, cell.scenarioPath, runOptions, error);
+        report.reportDir = writeRunReport(report, {
+          reportRoot: options['report-root'],
+          timestamp,
+          scenarioDirName
+        });
+        console.log(`${report.scenarioId}: ${report.evaluation.verdict}`);
+        console.log(`Report: ${report.reportDir}`);
+        console.log(`- infra_blocked: ${report.error}`);
+      }
+      results.push({
+        ...report,
+        scenarioPath: cell.scenarioPath,
+        copilotModel: cell.copilotModel,
+        simulatorModel: cell.simulatorModel,
+        runIndex: cell.runIndex
+      });
+    }
+
+    const summary = buildMatrixSummary({
+      profile: matrixPlan.profile,
+      copilotModels: matrixPlan.copilotModels,
+      simulatorModel: matrixPlan.simulatorModel,
+      runs: matrixPlan.runs,
+      expectedRuns: matrixPlan.cells.length,
+      preflight,
+      results
+    });
+    const matrixReportDir = writeMatrixReport(summary, {
+      reportRoot: options['report-root'],
+      timestamp
+    });
+
+    console.log(`Matrix verdict: ${summary.verdict}`);
+    console.log(`Matrix report: ${matrixReportDir}`);
+    if (summary.verdict !== 'pass') {
+      process.exitCode = 1;
     }
     return;
   }

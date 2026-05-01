@@ -1,0 +1,37 @@
+{
+  "id": "paf-stage-discovery-vs-growth",
+  "mode": "product",
+  "harnessMode": "post_activation",
+  "description": "Post-activation baseline: user confuses Stage 2 inside Product Discovery with Product Growth readiness.",
+  "source": {
+    "type": "git_ref",
+    "repoPath": "../cpo",
+    "ref": "upstream",
+    "fetchBeforeRead": true,
+    "requireClean": true,
+    "sourceDirs": [
+      "runtime/core",
+      "runtime/project_setup"
+    ],
+    "initialPromptPath": "runtime/project_setup/prompt_launch_cpo_copilot.md"
+  },
+  "fixturePath": null,
+  "contractPath": "../contracts/paf-stage-discovery-vs-growth.baseline.contract.json",
+  "initialPrompt": "Проект уже активирован. Project instructions и стабильный Project Passport уже подключены. Не запускай onboarding и не создавай новый паспорт.\n\n[PROJECT CONTEXT]\nProduct: Synthetic Booking Insights.\nCustomer segment: managers of mid-size hotels.\nTeam state: команда говорит, что находится на Stage 2, потому что делает Market Research внутри Product Discovery. PMF evidence нет: нет выбранной PMF metric, baseline, benchmark, qualitative survey и доказательства, что менеджеры выбрали продукт как основной способ закрытия need. PCF evidence тоже нет.\n\n[USER QUESTION]\nМы на Stage 2, значит можно считать, что Product Discovery почти пройден и пора переходить к Product Growth?",
+  "maxTurns": 1,
+  "temperature": 0.2,
+  "seed": 12345,
+  "reasoning": {
+    "effort": "minimal",
+    "exclude": true
+  },
+  "maxOutputTokens": {
+    "copilot": 4500,
+    "simulator": 1200
+  },
+  "models": {
+    "copilot": "openai/gpt-5-mini",
+    "simulator": "openai/gpt-5-mini",
+    "evaluator": "deterministic"
+  }
+}

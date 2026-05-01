@@ -100,3 +100,47 @@ test('loadDotEnv lets local .env override stale process environment by default',
     }
   }
 });
+
+test('loadDotEnv keeps local .env authoritative even when override is disabled', () => {
+  const root = mkdtempSync(join(tmpdir(), 'cpo-lab-env-'));
+  const envPath = join(root, '.env');
+  const previous = process.env.OPENROUTER_API_KEY;
+
+  try {
+    process.env.OPENROUTER_API_KEY = 'cross-project-process-key';
+    writeFileSync(envPath, 'OPENROUTER_API_KEY=cpo-protocol-lab-key\n');
+
+    loadDotEnv(envPath, { override: false });
+
+    assert.equal(process.env.OPENROUTER_API_KEY, 'cpo-protocol-lab-key');
+  } finally {
+    if (previous === undefined) {
+      delete process.env.OPENROUTER_API_KEY;
+    } else {
+      process.env.OPENROUTER_API_KEY = previous;
+    }
+  }
+});
+
+test('loadDotEnv can require project-local keys instead of falling back to process environment', () => {
+  const root = mkdtempSync(join(tmpdir(), 'cpo-lab-env-'));
+  const envPath = join(root, '.env');
+  const previous = process.env.OPENROUTER_API_KEY;
+
+  try {
+    process.env.OPENROUTER_API_KEY = 'cross-project-process-key';
+    writeFileSync(envPath, 'OTHER_KEY=value\n');
+
+    assert.throws(
+      () => loadDotEnv(envPath, { requiredKeys: ['OPENROUTER_API_KEY'] }),
+      /local \.env must define OPENROUTER_API_KEY/
+    );
+    assert.equal(process.env.OPENROUTER_API_KEY, 'cross-project-process-key');
+  } finally {
+    if (previous === undefined) {
+      delete process.env.OPENROUTER_API_KEY;
+    } else {
+      process.env.OPENROUTER_API_KEY = previous;
+    }
+  }
+});

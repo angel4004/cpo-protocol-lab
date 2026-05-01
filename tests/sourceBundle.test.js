@@ -85,6 +85,24 @@ test('readGitRefBundle reads markdown from the requested commit instead of the w
   assert.match(bundle.bundleSha256, /^[0-9a-f]{64}$/);
 });
 
+test('readGitRefBundle can read the current working tree snapshot explicitly', () => {
+  const { repoPath, firstCommit } = createRepo();
+  writeFileSync(join(repoPath, 'runtime', 'core', 'b.md'), '# untracked working tree file\n');
+
+  const bundle = readGitRefBundle({
+    repoPath,
+    ref: 'working-tree'
+  });
+
+  assert.equal(bundle.requestedRef, 'working-tree');
+  assert.equal(bundle.ref, 'working-tree');
+  assert.equal(bundle.commitSha, firstCommit);
+  assert.equal(bundle.dirty, true);
+  assert.equal(bundle.files.find((file) => file.path === 'runtime/core/a.md').content, '# core dirty working tree\n');
+  assert.equal(bundle.files.find((file) => file.path === 'runtime/core/b.md').content, '# untracked working tree file\n');
+  assert.equal(bundle.initialPrompt, 'launch v1\n');
+});
+
 test('readGitRefBundle reads upstream remote-tracking ref instead of local unpushed HEAD', () => {
   const { repoPath, pushedCommit, localCommit, upstreamRef } = createRepoWithUpstream();
 

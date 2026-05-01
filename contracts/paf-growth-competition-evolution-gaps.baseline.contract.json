@@ -1,0 +1,39 @@
+{
+  "id": "paf-growth-competition-evolution-gaps.baseline",
+  "description": "Baseline contract for handling weakly formalized Growth / Competition / Evolution reasoning without invented gates.",
+  "rules": [
+    {
+      "id": "late-plc-stages.exposes-canon-limits",
+      "severity": "hard_fail",
+      "type": "required_patterns",
+      "target": "assistant",
+      "patterns": [
+        "Product Growth|Growth",
+        "Product Competition|Competition",
+        "Product Evolution|Evolution",
+        "не найдено в каноне|нет строг|не зада[её]т строг|formal|gate|критери",
+        "допущ|assumption",
+        "proxy|приближ|артефакт|метрик",
+        "forbidden|нельзя утверждать|нельзя делать вывод"
+      ],
+      "reason": "Copilot должен помогать рассуждать о поздних PLC стадиях без выдумывания строгих gate-критериев."
+    },
+    {
+      "id": "late-plc-stages.no-invented-strict-gates",
+      "severity": "hard_fail",
+      "type": "forbidden_patterns",
+      "target": "assistant",
+      "patterns": [
+        "готовы к Competition",
+        "готовы к Evolution"
+      ],
+      "allowedContextPatterns": [
+        "Вы просите[^\\n]{0,160}строгий PAF gate",
+        "нет[^\\n]{0,120}(?:обязательн|строг|gate|критери)",
+        "не найдено[^\\n]{0,120}(?:gate|критери)",
+        "нельзя[^\\n]{0,120}(?:готовы к Competition|готовы к Evolution)"
+      ],
+      "reason": "Copilot не должен превращать слабый канон Growth/Competition/Evolution в жесткий invented gate."
+    }
+  ]
+}

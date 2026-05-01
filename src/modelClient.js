@@ -61,6 +61,19 @@ function compactObject(value) {
   return Object.fromEntries(Object.entries(value).filter(([, item]) => item !== undefined));
 }
 
+function normalizeUsage(usage) {
+  if (!usage) {
+    return undefined;
+  }
+
+  return {
+    inputTokens: usage.prompt_tokens ?? usage.input_tokens ?? usage.inputTokens ?? 0,
+    outputTokens: usage.completion_tokens ?? usage.output_tokens ?? usage.outputTokens ?? 0,
+    totalTokens: usage.total_tokens ?? usage.totalTokens ?? 0,
+    raw: usage
+  };
+}
+
 function toChatMessages(request) {
   return [
     request.instructions ? { role: 'system', content: request.instructions } : null,
@@ -83,7 +96,7 @@ function createOpenRouterClient(options) {
   const fetchImpl = options.fetchImpl ?? fetch;
 
   if (!apiKey) {
-    throw new Error('OPENROUTER_API_KEY is required. Put it in local .env or process environment.');
+    throw new Error('OPENROUTER_API_KEY is required. Put the project-scoped key in local .env.');
   }
 
   return {
@@ -109,7 +122,11 @@ function createOpenRouterClient(options) {
         body: JSON.stringify(body)
       });
 
-      return extractChatCompletionText(await readJsonResponse(response, 'OpenRouter'));
+      const json = await readJsonResponse(response, 'OpenRouter');
+      return {
+        text: extractChatCompletionText(json),
+        usage: normalizeUsage(json.usage)
+      };
     }
   };
 }
@@ -143,7 +160,11 @@ function createOpenAiResponsesClient(options) {
         body: JSON.stringify(body)
       });
 
-      return extractResponsesOutputText(await readJsonResponse(response, 'OpenAI'));
+      const json = await readJsonResponse(response, 'OpenAI');
+      return {
+        text: extractResponsesOutputText(json),
+        usage: normalizeUsage(json.usage)
+      };
     }
   };
 }

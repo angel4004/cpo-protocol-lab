@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { resolve } from 'node:path';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { join, relative, resolve } from 'node:path';
 
 export const DEFAULT_SOURCE_DIRS = ['runtime/core', 'runtime/project_setup'];
 export const DEFAULT_INITIAL_PROMPT_PATH = 'runtime/project_setup/prompt_launch_cpo_copilot.md';
@@ -30,6 +31,10 @@ function readFileFromRef(repoPath, ref, filePath) {
   return git(repoPath, ['show', `${ref}:${normalizeGitPath(filePath)}`]);
 }
 
+function readFileFromWorkingTree(repoPath, filePath) {
+  return readFileSync(join(repoPath, filePath), 'utf8');
+}
+
 function listMarkdownFiles(repoPath, ref, sourceDirs) {
   const args = ['ls-tree', '-r', '--name-only', ref, '--', ...sourceDirs.map(normalizeGitPath)];
   return git(repoPath, args)
@@ -37,6 +42,33 @@ function listMarkdownFiles(repoPath, ref, sourceDirs) {
     .map((line) => line.trim())
     .filter((line) => line.endsWith('.md'))
     .sort((left, right) => left.localeCompare(right));
+}
+
+function listMarkdownFilesFromWorkingTree(repoPath, sourceDirs) {
+  const paths = [];
+
+  function walk(directoryPath) {
+    for (const entry of readdirSync(directoryPath, { withFileTypes: true })) {
+      const entryPath = join(directoryPath, entry.name);
+      if (entry.isDirectory()) {
+        walk(entryPath);
+        continue;
+      }
+
+      if (entry.isFile() && entry.name.endsWith('.md')) {
+        paths.push(normalizeGitPath(relative(repoPath, entryPath)));
+      }
+    }
+  }
+
+  for (const sourceDir of sourceDirs.map(normalizeGitPath)) {
+    const sourcePath = join(repoPath, sourceDir);
+    if (existsSync(sourcePath) && statSync(sourcePath).isDirectory()) {
+      walk(sourcePath);
+    }
+  }
+
+  return paths.sort((left, right) => left.localeCompare(right));
 }
 
 function resolveSourceRef(repoPath, requestedRef) {
@@ -70,21 +102,26 @@ export function readGitRefBundle(options = {}) {
 
   git(repoPath, ['rev-parse', '--git-dir']);
   const ref = resolveSourceRef(repoPath, requestedRef);
+  const useWorkingTree = ref === 'working-tree';
 
-  if (fetchBeforeRead) {
+  if (fetchBeforeRead && !useWorkingTree) {
     fetchRef(repoPath, ref);
   }
 
   const dirtyStatus = git(repoPath, ['status', '--porcelain']);
-  if (requireClean && dirtyStatus.trim().length > 0) {
+  if (requireClean && !useWorkingTree && dirtyStatus.trim().length > 0) {
     throw new Error(`Source repo has a dirty working tree: ${repoPath}`);
   }
 
-  const commitSha = git(repoPath, ['rev-parse', `${ref}^{commit}`]).trim();
+  const commitSha = git(repoPath, ['rev-parse', `${useWorkingTree ? 'HEAD' : ref}^{commit}`]).trim();
   const branch = git(repoPath, ['branch', '--show-current']).trim() || null;
-  const paths = listMarkdownFiles(repoPath, ref, sourceDirs);
+  const paths = useWorkingTree
+    ? listMarkdownFilesFromWorkingTree(repoPath, sourceDirs)
+    : listMarkdownFiles(repoPath, ref, sourceDirs);
   const files = paths.map((path) => {
-    const content = readFileFromRef(repoPath, ref, path);
+    const content = useWorkingTree
+      ? readFileFromWorkingTree(repoPath, path)
+      : readFileFromRef(repoPath, ref, path);
     return {
       path,
       sha256: sha256(content),
@@ -104,7 +141,9 @@ export function readGitRefBundle(options = {}) {
     commitSha,
     sourceDirs: sourceDirs.map(normalizeGitPath),
     initialPromptPath,
-    initialPrompt: readFileFromRef(repoPath, ref, initialPromptPath),
+    initialPrompt: useWorkingTree
+      ? readFileFromWorkingTree(repoPath, initialPromptPath)
+      : readFileFromRef(repoPath, ref, initialPromptPath),
     files,
     fileCount: files.length,
     bundleSha256: sha256(bundleMaterial),

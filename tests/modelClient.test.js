@@ -22,6 +22,51 @@ test('extractChatCompletionText reads OpenRouter chat completion content', () =>
   assert.equal(text, 'hello from openrouter');
 });
 
+test('createModelClient returns OpenRouter completion text with usage metadata', async () => {
+  const client = createModelClient({
+    provider: 'openrouter',
+    apiKey: 'test-token',
+    fetchImpl: async () => ({
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify({
+        choices: [
+          {
+            message: {
+              role: 'assistant',
+              content: 'ok'
+            }
+          }
+        ],
+        usage: {
+          prompt_tokens: 100,
+          completion_tokens: 25,
+          total_tokens: 125
+        }
+      })
+    })
+  });
+
+  const result = await client.complete({
+    model: 'openai/gpt-5-mini',
+    input: [{ role: 'user', content: 'hello' }]
+  });
+
+  assert.deepEqual(result, {
+    text: 'ok',
+    usage: {
+      inputTokens: 100,
+      outputTokens: 25,
+      totalTokens: 125,
+      raw: {
+        prompt_tokens: 100,
+        completion_tokens: 25,
+        total_tokens: 125
+      }
+    }
+  });
+});
+
 test('extractResponsesOutputText reads direct output_text from Responses API response', () => {
   assert.equal(extractResponsesOutputText({ output_text: 'hello' }), 'hello');
 });
@@ -84,7 +129,7 @@ test('createModelClient sends OpenRouter chat completions requests without leaki
     maxOutputTokens: 100
   });
 
-  assert.equal(result, 'ok');
+  assert.equal(result.text, 'ok');
   assert.equal(calls[0].url, 'https://openrouter.ai/api/v1/chat/completions');
   assert.equal(calls[0].request.headers.Authorization, 'Bearer test-token');
   assert.equal(calls[0].request.headers['X-OpenRouter-Title'], 'CPO Protocol Lab');

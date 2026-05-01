@@ -30,9 +30,13 @@ export function loadFixture(filePath) {
 
 export function loadDotEnv(filePath = '.env', options = {}) {
   const resolved = resolve(filePath);
-  const override = options.override ?? true;
+  const requiredKeys = options.requiredKeys ?? [];
+  const fileKeys = new Set();
 
   if (!existsSync(resolved)) {
+    if (requiredKeys.length > 0) {
+      throw new Error(`local .env must define ${requiredKeys.join(', ')}. Missing env file: ${resolved}`);
+    }
     return;
   }
 
@@ -50,9 +54,15 @@ export function loadDotEnv(filePath = '.env', options = {}) {
 
     const key = trimmed.slice(0, separatorIndex).trim();
     const value = trimmed.slice(separatorIndex + 1).trim().replace(/^"|"$/g, '');
-    if (key && (override || !(key in process.env))) {
+    if (key) {
+      fileKeys.add(key);
       process.env[key] = value;
     }
+  }
+
+  const missingKeys = requiredKeys.filter((key) => !fileKeys.has(key));
+  if (missingKeys.length > 0) {
+    throw new Error(`local .env must define ${missingKeys.join(', ')}`);
   }
 }
 

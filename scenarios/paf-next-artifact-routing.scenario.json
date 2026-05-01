@@ -1,0 +1,37 @@
+{
+  "id": "paf-next-artifact-routing",
+  "mode": "product",
+  "harnessMode": "post_activation",
+  "description": "Post-activation baseline: user asks which artifact to create next from incomplete discovery context.",
+  "source": {
+    "type": "git_ref",
+    "repoPath": "../cpo",
+    "ref": "upstream",
+    "fetchBeforeRead": true,
+    "requireClean": true,
+    "sourceDirs": [
+      "runtime/core",
+      "runtime/project_setup"
+    ],
+    "initialPromptPath": "runtime/project_setup/prompt_launch_cpo_copilot.md"
+  },
+  "fixturePath": null,
+  "contractPath": "../contracts/paf-next-artifact-routing.baseline.contract.json",
+  "initialPrompt": "Проект уже активирован. Project instructions и стабильный Project Passport уже подключены. Не запускай onboarding и не создавай новый паспорт.\n\n[PROJECT CONTEXT]\nProduct: Synthetic Booking Insights.\nCustomer segment: managers of mid-size hotels.\nNeed: заранее понимать, какие бронирования с высокой вероятностью отменятся.\nCurrent evidence: 12 customer interviews and six months of historical cancellation data.\nCurrent artifacts: customer interview notes, rough cancellation dataset, draft list of cancellation-risk hypotheses.\nMissing artifacts: market sizing, competitor map, value proposition list, business model, GTM, media plan, PMF metric baseline, PCF evidence.\nCurrent team question: мы хотим понять, какой следующий рабочий артефакт делать, чтобы не перепрыгнуть через PAF.\n\n[USER QUESTION]\nКакой следующий артефакт нам делать и почему?",
+  "maxTurns": 1,
+  "temperature": 0.2,
+  "seed": 12345,
+  "reasoning": {
+    "effort": "minimal",
+    "exclude": true
+  },
+  "maxOutputTokens": {
+    "copilot": 4500,
+    "simulator": 1200
+  },
+  "models": {
+    "copilot": "openai/gpt-5-mini",
+    "simulator": "openai/gpt-5-mini",
+    "evaluator": "deterministic"
+  }
+}
