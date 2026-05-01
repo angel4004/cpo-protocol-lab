@@ -16,7 +16,8 @@
 
 - Поведение onboarding-протокола.
 - Inline Sources-like контекст из markdown-пакета `cpo`.
-- Порядок событий: Sources blocks, mode selection, Customer Value Chain, Draft Project Passport, Passport Challenge Review, Passport Hardening.
+- Порядок событий: Sources blocks, passport presence check, mode selection, Customer Value Chain, context intake, Draft Project Passport, Passport Challenge Review, Passport Hardening.
+- Passport-first ветки: `no passport` продолжает context intake до достаточного контекста, `passport exists` сначала требует видимый паспорт для review.
 - Forbidden outputs: draft как publish artifact, ранний Final Snapshot, unsupported claims про customer success / PMF / PCF / бизнес-эффект.
 - Legacy case: старый паспорт без Customer Value Chain должен считаться onboarding gap / missing input / needs follow-up.
 

@@ -5,6 +5,8 @@ import { readFileSync } from 'node:fs';
 import { evaluateTranscript } from '../src/evaluator/deterministicRules.js';
 
 const draftAlreadyInSourcesContract = JSON.parse(readFileSync(new URL('../contracts/draft-already-in-sources.mvp.contract.json', import.meta.url), 'utf8'));
+const incompletePassportContract = JSON.parse(readFileSync(new URL('../contracts/incomplete-passport.mvp.contract.json', import.meta.url), 'utf8'));
+const onboardingProductContract = JSON.parse(readFileSync(new URL('../contracts/onboarding-product.mvp.contract.json', import.meta.url), 'utf8'));
 const pafContradictoryContextContract = JSON.parse(readFileSync(new URL('../contracts/paf-contradictory-context.baseline.contract.json', import.meta.url), 'utf8'));
 const pafPmfWithoutEvidenceContract = JSON.parse(readFileSync(new URL('../contracts/paf-pmf-without-evidence.baseline.contract.json', import.meta.url), 'utf8'));
 const pafStageDiscoveryVsGrowthContract = JSON.parse(readFileSync(new URL('../contracts/paf-stage-discovery-vs-growth.baseline.contract.json', import.meta.url), 'utf8'));
@@ -95,6 +97,110 @@ test('evaluateTranscript passes deterministic onboarding contract checks', () =>
 
   assert.equal(result.verdict, 'pass');
   assert.equal(result.findings.every((finding) => finding.status === 'pass'), true);
+});
+
+test('onboarding product contract accepts passport-first context intake before draft', () => {
+  const transcript = [
+    {
+      role: 'assistant',
+      content: [
+        '[START HERE] Activate CPO Copilot',
+        '### Что уже подключено в Sources',
+        'Рабочий markdown-пакет подключён полностью.',
+        '### Что обязательно добавить в Sources сейчас',
+        'Ничего из рабочего пакета не требуется.',
+        '### Что не стоит добавлять в Sources',
+        'Google Drive как основной источник.',
+        '### Что можно добавить позже',
+        'Проектные документы.',
+        '## Passport Check',
+        'passport status: unclear',
+        '## Один следующий вопрос',
+        'У тебя уже есть паспорт проекта, который ты сделал в другом Copilot, или паспорта ещё нет?'
+      ].join('\n')
+    },
+    {
+      role: 'user',
+      content: 'Паспорта ещё нет.'
+    },
+    {
+      role: 'assistant',
+      content: [
+        'Классификация: passport status = no passport.',
+        'Один следующий вопрос',
+        'У тебя уже есть продукт или проект, с которым работаем, или ты пока выбираешь направление?'
+      ].join('\n')
+    },
+    {
+      role: 'user',
+      content: 'Product mode.'
+    },
+    {
+      role: 'assistant',
+      content: [
+        'Режим: product mode.',
+        'Заполни Customer Value Chain Intake четырьмя строками?',
+        'Что нужно клиенту:',
+        'Что даёт продукт:',
+        'Что клиент с этим делает:',
+        'Что клиент получает в измеримом результате:'
+      ].join('\n')
+    },
+    {
+      role: 'user',
+      content: [
+        'Что нужно клиенту: заранее видеть риск отмены.',
+        'Что даёт продукт: risk score and reason.',
+        'Что клиент с этим делает: связывается с гостем.',
+        'Что клиент получает в измеримом результате: снижение предотвратимых отмен.'
+      ].join('\n')
+    },
+    {
+      role: 'assistant',
+      content: [
+        'Краткое summary Customer Value Chain',
+        'Missing context / next needed inputs',
+        '- Segment / Scope: missing input',
+        '- Baseline: unknown',
+        'Forbidden claim labels:',
+        '- PMF status: not assessed',
+        'Один следующий вопрос',
+        'Какой scope пилота выбираем?'
+      ].join('\n')
+    }
+  ];
+
+  const result = evaluateTranscript(transcript, onboardingProductContract);
+
+  assert.equal(result.verdict, 'pass');
+});
+
+test('incomplete passport contract accepts visibility gap before hardening starts', () => {
+  const transcript = [
+    {
+      role: 'assistant',
+      content: [
+        '## Sources Check',
+        '### Что уже подключено в Sources',
+        'Рабочий markdown-пакет подключён полностью.',
+        '### Что обязательно добавить в Sources сейчас',
+        'Нужно увидеть сам паспорт.',
+        '### Что не стоит добавлять в Sources',
+        'Шумные raw-export архивы.',
+        '### Что можно добавить позже',
+        'Research notes.',
+        '## Passport Check',
+        'passport exists, content visibility gap.',
+        'Классификация: onboarding gap / missing input / needs follow-up.',
+        '## Один следующий вопрос',
+        'Как называется файл паспорта в Sources или можешь вставить его текст сюда?'
+      ].join('\n')
+    }
+  ];
+
+  const result = evaluateTranscript(transcript, incompletePassportContract);
+
+  assert.equal(result.verdict, 'pass');
 });
 
 test('evaluateTranscript fails when draft is treated as publish-ready and final appears too early', () => {
@@ -429,6 +535,74 @@ test('evaluateTranscript treats scoped forbidden checks as not applicable when a
 
   assert.equal(result.verdict, 'pass');
   assert.equal(result.findings[0].status, 'pass');
+});
+
+test('evaluateTranscript treats optional post-draft checks as not applicable before draft appears', () => {
+  const result = evaluateTranscript([
+    {
+      role: 'assistant',
+      content: 'Customer Value Chain Intake собран. Продолжаю Project Context Intake одним вопросом.'
+    }
+  ], {
+    id: 'passport-first-optional-post-draft-test',
+    rules: [
+      {
+        id: 'cvc.before-draft',
+        severity: 'hard_fail',
+        type: 'ordered_patterns_if_both_present',
+        target: 'assistant',
+        before: 'Customer Value Chain',
+        after: '\\[DRAFT PROJECT PASSPORT\\]',
+        reason: 'If draft appears, CVC must appear before it.'
+      },
+      {
+        id: 'draft.followed-by-review',
+        severity: 'hard_fail',
+        type: 'required_after_pattern_if_anchor_present',
+        target: 'assistant',
+        anchor: '\\[DRAFT PROJECT PASSPORT\\]',
+        patterns: ['\\[PASSPORT CHALLENGE REVIEW\\]'],
+        reason: 'If draft appears, review must appear in the same turn.'
+      }
+    ]
+  });
+
+  assert.equal(result.verdict, 'pass');
+  assert.equal(result.findings.every((finding) => finding.status === 'pass'), true);
+});
+
+test('evaluateTranscript still fails optional post-draft checks when draft appears too early', () => {
+  const result = evaluateTranscript([
+    {
+      role: 'assistant',
+      content: '[DRAFT PROJECT PASSPORT]\nDraft without CVC and review.'
+    }
+  ], {
+    id: 'passport-first-optional-post-draft-failure-test',
+    rules: [
+      {
+        id: 'cvc.before-draft',
+        severity: 'hard_fail',
+        type: 'ordered_patterns_if_both_present',
+        target: 'assistant',
+        before: 'Customer Value Chain',
+        after: '\\[DRAFT PROJECT PASSPORT\\]',
+        reason: 'If draft appears, CVC must appear before it.'
+      },
+      {
+        id: 'draft.followed-by-review',
+        severity: 'hard_fail',
+        type: 'required_after_pattern_if_anchor_present',
+        target: 'assistant',
+        anchor: '\\[DRAFT PROJECT PASSPORT\\]',
+        patterns: ['\\[PASSPORT CHALLENGE REVIEW\\]'],
+        reason: 'If draft appears, review must appear in the same turn.'
+      }
+    ]
+  });
+
+  assert.equal(result.verdict, 'hard_fail');
+  assert.equal(result.findings.every((finding) => finding.status === 'fail'), true);
 });
 
 test('draft-already-in-sources contract allows final passport publication wording after draft removal', () => {

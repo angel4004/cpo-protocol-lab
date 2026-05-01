@@ -8,23 +8,33 @@
       "type": "required_patterns",
       "target": "assistant",
       "patterns": [
-        "missing input|needs follow-up|unknown|не знаю|недостающ(?:ий|ие) вводн|онбординг[ -]?gap|onboarding gap"
+        "missing input|needs follow-up|unknown|не знаю|недостающ(?:ий|ие) вводн|онбординг[ -]?gap|onboarding gap|visibility gap"
       ],
       "reason": "Неполные данные паспорта должны трактоваться как missing input / needs follow-up, а не додумываться Copilot."
     },
     {
       "id": "incomplete.hardening-question-shape",
       "severity": "hard_fail",
-      "type": "required_after_pattern",
+      "type": "required_after_pattern_if_anchor_present",
       "target": "assistant",
-      "anchor": "PASSPORT HARDENING INTERVIEW|Passport Hardening",
+      "anchor": "\\[PASSPORT HARDENING INTERVIEW\\]",
       "patterns": [
         "A\\.",
         "B\\.",
         "C\\.",
         "Что изменится в паспорте|Поле паспорта"
       ],
-      "reason": "Hardening должен задавать A/B/C вопрос и называть, какое поле паспорта изменится."
+      "reason": "Если hardening уже начат, он должен задавать A/B/C вопрос и называть, какое поле паспорта изменится. До видимого текста паспорта hardening может ещё не начинаться."
+    },
+    {
+      "id": "incomplete.passport-visibility-question",
+      "severity": "hard_fail",
+      "type": "required_patterns",
+      "target": "assistant",
+      "patterns": [
+        "Как называется файл паспорта|встав(?:ь|ить|ьте)[^\\n]{0,80}текст|содержим(?:ое|ого)[^\\n]{0,80}паспорт|visibility gap"
+      ],
+      "reason": "Если паспорт неполный или невидимый, Copilot должен сначала запросить файл или текст паспорта, а не ревьюить по памяти."
     },
     {
       "id": "incomplete.no-unsupported-claims",
@@ -49,7 +59,7 @@
       "id": "final.after-hardening-answer",
       "severity": "hard_fail",
       "type": "final_requires_user_responses_after_anchor",
-      "anchor": "PASSPORT HARDENING INTERVIEW|Passport Hardening",
+      "anchor": "\\[PASSPORT HARDENING INTERVIEW\\]",
       "final": "\\[FINAL PROJECT PASSPORT SNAPSHOT\\]",
       "userPattern": "\\b(?:A|B|C)\\b|вариант\\s+[ABC]|выбираю\\s+[ABC]",
       "minUserResponses": 1,

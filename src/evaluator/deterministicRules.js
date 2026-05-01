@@ -106,6 +106,26 @@ function evaluateOrderedPatterns(transcript, rule) {
   return fail(rule, `Нарушен порядок: "${after.text}" появился раньше "${before.text}"`);
 }
 
+function evaluateOrderedPatternsIfBothPresent(transcript, rule) {
+  const text = textForTarget(transcript, rule.target);
+  const before = firstMatch(text, rule.before, rule.flags);
+  const after = firstMatch(text, rule.after, rule.flags);
+
+  if (!after) {
+    return pass(rule, `After marker absent: ${rule.after}. Ordered check not applicable yet.`);
+  }
+
+  if (!before) {
+    return fail(rule, `After marker found before required before marker: before=false, after=true`);
+  }
+
+  if (before.index < after.index) {
+    return pass(rule);
+  }
+
+  return fail(rule, `Нарушен порядок: "${after.text}" появился раньше "${before.text}"`);
+}
+
 function evaluateRequiredAfterPattern(transcript, rule) {
   const candidates = transcript.filter((turn) => {
     if (rule.target !== 'all' && turn.role !== rule.target) {
@@ -117,6 +137,35 @@ function evaluateRequiredAfterPattern(transcript, rule) {
 
   if (candidates.length === 0) {
     return fail(rule, `Не найден anchor: ${rule.anchor}`);
+  }
+
+  const checked = candidates.map((candidate) => {
+    const text = asText(candidate.content);
+    return {
+      text,
+      missing: rule.patterns.filter((pattern) => !regex(pattern, rule.flags).test(text))
+    };
+  });
+
+  if (checked.some((candidate) => candidate.missing.length === 0)) {
+    return pass(rule);
+  }
+
+  const missing = checked[0].missing;
+  return fail(rule, `После anchor не найдены признаки: ${missing.join(', ')}`);
+}
+
+function evaluateRequiredAfterPatternIfAnchorPresent(transcript, rule) {
+  const candidates = transcript.filter((turn) => {
+    if (rule.target !== 'all' && turn.role !== rule.target) {
+      return false;
+    }
+
+    return regex(rule.anchor, rule.flags).test(asText(turn.content));
+  });
+
+  if (candidates.length === 0) {
+    return pass(rule, `Anchor absent: ${rule.anchor}. Required-after check not applicable yet.`);
   }
 
   const checked = candidates.map((candidate) => {
@@ -248,8 +297,16 @@ export function evaluateTranscript(transcript, contract) {
       return evaluateOrderedPatterns(transcript, rule);
     }
 
+    if (rule.type === 'ordered_patterns_if_both_present') {
+      return evaluateOrderedPatternsIfBothPresent(transcript, rule);
+    }
+
     if (rule.type === 'required_after_pattern') {
       return evaluateRequiredAfterPattern(transcript, rule);
+    }
+
+    if (rule.type === 'required_after_pattern_if_anchor_present') {
+      return evaluateRequiredAfterPatternIfAnchorPresent(transcript, rule);
     }
 
     if (rule.type === 'forbidden_in_turn_with_pattern') {

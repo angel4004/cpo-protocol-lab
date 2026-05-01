@@ -36,6 +36,40 @@
       "reason": "Copilot должен выбрать product mode, когда паспорт описывает существующий продукт."
     },
     {
+      "id": "passport.presence-check",
+      "severity": "hard_fail",
+      "type": "required_patterns",
+      "target": "assistant",
+      "patterns": [
+        "Passport Check|passport status|паспорт[а]? проекта",
+        "У тебя уже есть паспорт проекта[^\\n]{0,120}паспорта[^\\n]{0,40}нет"
+      ],
+      "reason": "В новом onboarding Copilot должен сначала развести ветки passport exists / no passport."
+    },
+    {
+      "id": "passport.no-passport-flow",
+      "severity": "hard_fail",
+      "type": "required_patterns",
+      "target": "assistant",
+      "patterns": [
+        "no passport flow|passport status\\s*=\\s*no passport|паспорта\\s+(?:ещ[её]\\s+)?нет"
+      ],
+      "reason": "Если пользователь говорит, что паспорта нет, Copilot должен перейти в no passport flow."
+    },
+    {
+      "id": "customer-value-chain.intake-present",
+      "severity": "hard_fail",
+      "type": "required_patterns",
+      "target": "assistant",
+      "patterns": [
+        "Customer Value Chain Intake|Что нужно клиенту",
+        "Что да[её]т продукт",
+        "Что клиент с этим делает",
+        "Что клиент получает"
+      ],
+      "reason": "В no passport flow Copilot должен собрать Customer Value Chain Intake до подготовки draft."
+    },
+    {
       "id": "one-question-per-step.warning",
       "severity": "warning",
       "type": "max_question_marks_per_turn",
@@ -46,23 +80,23 @@
     {
       "id": "customer-value-chain.before-draft",
       "severity": "hard_fail",
-      "type": "ordered_patterns",
+      "type": "ordered_patterns_if_both_present",
       "target": "assistant",
       "before": "Customer Value Chain|Цепочк[аи] клиентской ценности|что нужно клиенту",
       "after": "\\[DRAFT PROJECT PASSPORT\\]",
-      "reason": "Customer Value Chain Intake должен пройти до Draft Project Passport."
+      "reason": "Если Draft Project Passport уже появился, Customer Value Chain Intake должен быть раньше него. До draft эта проверка не применяется."
     },
     {
       "id": "draft.followed-by-review-and-hardening",
       "severity": "hard_fail",
-      "type": "required_after_pattern",
+      "type": "required_after_pattern_if_anchor_present",
       "target": "assistant",
       "anchor": "\\[DRAFT PROJECT PASSPORT\\]",
       "patterns": [
         "\\[PASSPORT CHALLENGE REVIEW\\]",
         "\\[PASSPORT HARDENING INTERVIEW"
       ],
-      "reason": "После Draft Project Passport Copilot должен сразу выполнить Passport Challenge Review и начать Passport Hardening."
+      "reason": "Если Draft Project Passport появился, Copilot должен сразу выполнить Passport Challenge Review и начать Passport Hardening. До draft эта проверка не применяется."
     },
     {
       "id": "draft.not-ready-for-sources",
@@ -90,7 +124,7 @@
     {
       "id": "hardening.question-shape",
       "severity": "hard_fail",
-      "type": "required_after_pattern",
+      "type": "required_after_pattern_if_anchor_present",
       "target": "assistant",
       "anchor": "\\[PASSPORT HARDENING INTERVIEW",
       "patterns": [
@@ -99,7 +133,7 @@
         "C[\\.)]",
         "Что изменится в паспорте|Поле паспорта"
       ],
-      "reason": "Hardening-вопрос должен содержать варианты A/B/C и объяснять, какое поле паспорта изменится."
+      "reason": "Если Passport Hardening Interview появился, hardening-вопрос должен содержать варианты A/B/C и объяснять, какое поле паспорта изменится."
     },
     {
       "id": "final.not-in-first-post-draft-turn",
